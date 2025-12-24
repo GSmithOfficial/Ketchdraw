@@ -422,6 +422,8 @@
         let isKetcherReady = false;
         let debounceTimer = null;
         let stableCount = 0;
+        let consecutiveStableCount = 0;
+        const STABILITY_THRESHOLD = 5; // Require 5 consecutive stable readings (500ms at 100ms interval)
 
         // RDKit CDN base URL
         const RDKIT_CDN_BASE = 'https://unpkg.com/@rdkit/rdkit/dist/';
@@ -517,7 +519,7 @@
             document.getElementById('status-dot').classList.toggle('ready', ready);
         }
 
-        // Poll for molecule changes with debouncing to avoid hover previews
+        // Poll for molecule changes with stability detection to avoid hover previews
         function startPolling() {
             setInterval(async () => {
                 if (!ketcherInstance) return;
@@ -525,23 +527,20 @@
                 try {
                     const smiles = await ketcherInstance.getSmiles();
 
-                    // If SMILES changed, start debounce timer
+                    // If SMILES changed, reset stability counter
                     if (smiles !== lastSmiles) {
                         lastSmiles = smiles;
-                        stableCount = 0;
+                        consecutiveStableCount = 0;
+                    } else {
+                        // SMILES stayed the same - increment stability counter
+                        consecutiveStableCount++;
 
-                        // Clear existing timer
-                        if (debounceTimer) {
-                            clearTimeout(debounceTimer);
+                        // Only update after SMILES has been stable for multiple consecutive readings
+                        // This filters out hover previews which are typically transient
+                        if (consecutiveStableCount >= STABILITY_THRESHOLD && smiles !== lastStableSmiles) {
+                            lastStableSmiles = smiles;
+                            calculateProperties(smiles);
                         }
-
-                        // Wait for SMILES to be stable for 300ms before updating
-                        debounceTimer = setTimeout(() => {
-                            if (lastSmiles === smiles && smiles !== lastStableSmiles) {
-                                lastStableSmiles = smiles;
-                                calculateProperties(smiles);
-                            }
-                        }, 300);
                     }
                 } catch (e) {
                     // Silently handle errors during polling
