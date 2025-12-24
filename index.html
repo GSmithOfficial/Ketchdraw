@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KetchDraw - Molecular Structure Editor</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚗️</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-tertiary: #0f3460;
+            --bg-card: #1a2744;
+            --accent: #e94560;
+            --success: #4ecca3;
+            --warning: #ffc107;
+            --text-primary: #e0e0e0;
+            --text-secondary: #888;
+            --border: #1a4a7a;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            background: var(--bg-primary);
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #ketcher-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #ketcher-frame {
+            flex: 1;
+            width: 100%;
+            border: none;
+        }
+
+        .smiles-input-bar {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+        }
+
+        .smiles-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .smiles-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .smiles-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .smiles-btn:hover {
+            background: #c73e55;
+        }
+
+        .smiles-btn.secondary {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .smiles-btn.secondary:hover {
+            background: var(--border);
+        }
+
+        .properties-panel {
+            width: 260px;
+            min-width: 260px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, width 0.3s ease, min-width 0.3s ease;
+            border-left: 1px solid var(--bg-tertiary);
+            position: relative;
+        }
+
+        .properties-panel.collapsed {
+            width: 0;
+            min-width: 0;
+            overflow: hidden;
+            border-left: none;
+        }
+
+        .panel-toggle {
+            position: absolute;
+            left: -28px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 56px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 6px 0 0 6px;
+            color: var(--accent);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 100;
+            transition: background 0.2s;
+        }
+
+        .panel-toggle:hover {
+            background: var(--border);
+        }
+
+        .panel-header {
+            padding: 10px 14px;
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-header svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .molecules-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+        }
+
+        .molecule-card {
+            background: var(--bg-card);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            overflow: hidden;
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        .molecule-header {
+            padding: 6px 10px;
+            background: var(--bg-tertiary);
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--accent);
+            gap: 6px;
+        }
+
+        .molecule-smiles {
+            font-size: 9px;
+            color: var(--text-secondary);
+            font-family: monospace;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background: var(--bg-tertiary);
+            padding: 1px;
+        }
+
+        .property-cell {
+            background: var(--bg-card);
+            padding: 4px 6px;
+            text-align: center;
+        }
+
+        .property-label {
+            font-size: 8px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-bottom: 1px;
+            letter-spacing: 0.3px;
+        }
+
+        .property-value {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        .property-value.warning {
+            color: var(--warning);
+        }
+
+        .property-value.alert {
+            color: var(--accent);
+        }
+
+        .no-molecules {
+            text-align: center;
+            padding: 30px 16px;
+            color: #555;
+        }
+
+        .no-molecules svg {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 10px;
+            opacity: 0.4;
+        }
+
+        .no-molecules p {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--bg-tertiary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 16px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .loading-subtext {
+            margin-top: 6px;
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        .status-bar {
+            padding: 6px 12px;
+            background: var(--bg-tertiary);
+            font-size: 10px;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .status-dot.ready {
+            background: var(--success);
+        }
+
+        /* Custom scrollbar */
+        .molecules-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .molecules-list::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        .molecules-list::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+
+        .molecules-list::-webkit-scrollbar-thumb:hover {
+            background: var(--border);
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 2px 4px;
+            font-size: 10px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+            color: var(--success);
+        }
+
+        .help-text {
+            font-size: 10px;
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading KetchDraw...</div>
+        <div class="loading-subtext" id="loading-status">Initializing RDKit...</div>
+    </div>
+
+    <div class="container">
+        <div id="ketcher-container">
+            <iframe id="ketcher-frame" src="https://lifescience.opensource.epam.com/ketcher/demo.html"></iframe>
+            <div class="smiles-input-bar">
+                <input type="text" class="smiles-input" id="smiles-input" placeholder="Enter SMILES (e.g., CCO for ethanol, or CCO.C=O for multiple molecules)">
+                <button class="smiles-btn" onclick="loadSmiles()">Load</button>
+                <button class="smiles-btn secondary" onclick="getSmiles()">Get SMILES</button>
+            </div>
+        </div>
+
+        <div class="properties-panel" id="properties-panel">
+            <button class="panel-toggle" id="panel-toggle" title="Toggle Properties Panel">
+                <span>◀</span>
+            </button>
+
+            <div class="panel-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0-6v6"/>
+                </svg>
+                Properties
+            </div>
+
+            <div class="help-text">
+                Enter SMILES below or draw in Ketcher, then click "Get SMILES" to calculate properties. Use "." to separate multiple molecules.
+            </div>
+
+            <div class="molecules-list" id="molecules-list">
+                <div class="no-molecules">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="3"/>
+                        <circle cx="4" cy="8" r="2"/>
+                        <circle cx="20" cy="8" r="2"/>
+                        <circle cx="4" cy="16" r="2"/>
+                        <circle cx="20" cy="16" r="2"/>
+                        <path d="M6 8h3M15 8h3M6 16h3M15 16h3M12 9V6M12 18v-3"/>
+                    </svg>
+                    <p>Draw a molecule or enter SMILES to see properties</p>
+                </div>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span id="status-text">Initializing...</span>
+                </div>
+                <span id="molecule-count">0 molecules</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load RDKit -->
+    <script src="https://unpkg.com/@rdkit/rdkit@2024.3.5/dist/RDKit_minimal.js"></script>
+
+    <script>
+        let RDKit = null;
+        let ketcherInstance = null;
+        let lastSmiles = '';
+        let isRDKitReady = false;
+        let isKetcherReady = false;
+        let pollingInterval = null;
+
+        // Initialize RDKit
+        async function initRDKit() {
+            try {
+                document.getElementById('loading-status').textContent = 'Loading RDKit (may take a moment)...';
+                RDKit = await window.initRDKitModule();
+                console.log('RDKit initialized:', RDKit.version());
+                isRDKitReady = true;
+                document.getElementById('loading-status').textContent = 'RDKit ready, loading Ketcher...';
+                checkReady();
+            } catch (error) {
+                console.error('Failed to initialize RDKit:', error);
+                updateStatus('RDKit failed', false);
+                document.getElementById('loading-status').textContent = 'RDKit failed to load: ' + error.message;
+            }
+        }
+
+        // Initialize Ketcher
+        function initKetcher() {
+            const frame = document.getElementById('ketcher-frame');
+
+            frame.onload = () => {
+                // Wait for Ketcher to be ready
+                const checkInterval = setInterval(() => {
+                    try {
+                        if (frame.contentWindow && frame.contentWindow.ketcher) {
+                            ketcherInstance = frame.contentWindow.ketcher;
+                            console.log('Ketcher connected');
+                            clearInterval(checkInterval);
+                            isKetcherReady = true;
+                            checkReady();
+                            startPolling();
+                        }
+                    } catch (e) {
+                        // Cross-origin - will need manual SMILES entry
+                        console.log('Ketcher cross-origin, using manual mode');
+                    }
+                }, 500);
+
+                // Timeout - mark as ready anyway
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    if (!isKetcherReady) {
+                        isKetcherReady = true;
+                        checkReady();
+                        console.log('Ketcher ready (manual mode)');
+                    }
+                }, 5000);
+            };
+        }
+
+        function checkReady() {
+            if (isRDKitReady && isKetcherReady) {
+                document.getElementById('loading').classList.add('hidden');
+                updateStatus(ketcherInstance ? 'Connected' : 'Manual mode', true);
+            }
+        }
+
+        function updateStatus(text, ready) {
+            document.getElementById('status-text').textContent = text;
+            document.getElementById('status-dot').classList.toggle('ready', ready);
+        }
+
+        // Poll for molecule changes (when Ketcher is accessible)
+        function startPolling() {
+            if (!ketcherInstance) return;
+
+            pollingInterval = setInterval(async () => {
+                try {
+                    const smiles = await ketcherInstance.getSmiles();
+                    if (smiles !== lastSmiles) {
+                        lastSmiles = smiles;
+                        document.getElementById('smiles-input').value = smiles;
+                        calculateProperties(smiles);
+                    }
+                } catch (e) {
+                    // Silently handle errors
+                }
+            }, 500);
+        }
+
+        // Load SMILES into Ketcher
+        async function loadSmiles() {
+            const smiles = document.getElementById('smiles-input').value.trim();
+            if (!smiles) return;
+
+            if (ketcherInstance) {
+                try {
+                    await ketcherInstance.setMolecule(smiles);
+                } catch (e) {
+                    console.error('Failed to load SMILES into Ketcher:', e);
+                }
+            }
+
+            calculateProperties(smiles);
+        }
+
+        // Get SMILES from Ketcher
+        async function getSmiles() {
+            if (ketcherInstance) {
+                try {
+                    const smiles = await ketcherInstance.getSmiles();
+                    document.getElementById('smiles-input').value = smiles;
+                    calculateProperties(smiles);
+                } catch (e) {
+                    console.error('Failed to get SMILES from Ketcher:', e);
+                    alert('Could not retrieve SMILES from Ketcher. Please enter SMILES manually.');
+                }
+            } else {
+                // Use what's in the input field
+                const smiles = document.getElementById('smiles-input').value.trim();
+                if (smiles) {
+                    calculateProperties(smiles);
+                } else {
+                    alert('Please enter a SMILES string in the input field.');
+                }
+            }
+        }
+
+        // Calculate molecular properties
+        function calculateProperties(smilesString) {
+            if (!RDKit || !smilesString || smilesString.trim() === '') {
+                showNoMolecules();
+                return;
+            }
+
+            // Split by '.' to handle multiple molecules (fragments)
+            const smilesList = smilesString.split('.').filter(s => s.trim() !== '');
+
+            if (smilesList.length === 0) {
+                showNoMolecules();
+                return;
+            }
+
+            const moleculesData = [];
+
+            for (let i = 0; i < smilesList.length; i++) {
+                const smiles = smilesList[i].trim();
+                if (!smiles) continue;
+
+                try {
+                    const mol = RDKit.get_mol(smiles);
+                    if (mol) {
+                        const props = calculateMolProps(mol, smiles);
+                        moleculesData.push(props);
+                        mol.delete();
+                    }
+                } catch (e) {
+                    console.error('Error processing molecule:', smiles, e);
+                    moleculesData.push({
+                        smiles: smiles,
+                        error: true
+                    });
+                }
+            }
+
+            renderMolecules(moleculesData);
+        }
+
+        function calculateMolProps(mol, smiles) {
+            const descriptors = JSON.parse(mol.get_descriptors());
+
+            // Count stereocenters from SMILES
+            const definedStereo = (smiles.match(/@@?/g) || []).length;
+
+            // Try to detect unspecified stereo (simplified)
+            let unspecifiedStereo = 0;
+            try {
+                const chiralInfo = mol.get_stereo_tags ? mol.get_stereo_tags() : '';
+                if (chiralInfo && chiralInfo.includes('?')) {
+                    unspecifiedStereo = (chiralInfo.match(/\?/g) || []).length;
+                }
+            } catch (e) {
+                // Ignore stereo detection errors
+            }
+
+            return {
+                smiles: smiles,
+                mw: descriptors.exactmw ? parseFloat(descriptors.exactmw).toFixed(1) : 'N/A',
+                clogp: descriptors.CrippenClogP ? parseFloat(descriptors.CrippenClogP).toFixed(2) : 'N/A',
+                tpsa: descriptors.tpsa ? parseFloat(descriptors.tpsa).toFixed(0) : 'N/A',
+                hba: descriptors.NumHBA ?? 'N/A',
+                hbd: descriptors.NumHBD ?? 'N/A',
+                fsp3: descriptors.FractionCSP3 ? parseFloat(descriptors.FractionCSP3).toFixed(2) : 'N/A',
+                rotBonds: descriptors.NumRotatableBonds ?? 'N/A',
+                hac: descriptors.NumHeavyAtoms ?? 'N/A',
+                hetero: descriptors.NumHeteroatoms ?? 'N/A',
+                arRings: descriptors.NumAromaticRings ?? 'N/A',
+                stereo: definedStereo,
+                unspecified: unspecifiedStereo
+            };
+        }
+
+        function showNoMolecules() {
+            document.getElementById('molecules-list').innerHTML = `
+                <div class="no-molecules">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="3"/>
+                        <circle cx="4" cy="8" r="2"/>
+                        <circle cx="20" cy="8" r="2"/>
+                        <circle cx="4" cy="16" r="2"/>
+                        <circle cx="20" cy="16" r="2"/>
+                        <path d="M6 8h3M15 8h3M6 16h3M15 16h3M12 9V6M12 18v-3"/>
+                    </svg>
+                    <p>Draw a molecule or enter SMILES to see properties</p>
+                </div>
+            `;
+            document.getElementById('molecule-count').textContent = '0 molecules';
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback could be added here
+            }).catch(err => console.error('Copy failed:', err));
+        }
+
+        function renderMolecules(moleculesData) {
+            const container = document.getElementById('molecules-list');
+
+            if (moleculesData.length === 0) {
+                showNoMolecules();
+                return;
+            }
+
+            container.innerHTML = moleculesData.map((mol, index) => {
+                if (mol.error) {
+                    return `
+                        <div class="molecule-card">
+                            <div class="molecule-header">
+                                <span>Mol ${index + 1}</span>
+                                <span class="molecule-smiles" style="color: var(--accent);">Invalid SMILES</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                <div class="molecule-card">
+                    <div class="molecule-header">
+                        <span>Mol ${index + 1}</span>
+                        <span class="molecule-smiles" title="${escapeHtml(mol.smiles)}">${escapeHtml(mol.smiles)}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${escapeJs(mol.smiles)}')" title="Copy SMILES">📋</button>
+                    </div>
+                    <div class="properties-grid">
+                        <div class="property-cell">
+                            <div class="property-label">MW</div>
+                            <div class="property-value ${getMWClass(mol.mw)}">${mol.mw}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">cLogP</div>
+                            <div class="property-value ${getLogPClass(mol.clogp)}">${mol.clogp}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">TPSA</div>
+                            <div class="property-value ${getTPSAClass(mol.tpsa)}">${mol.tpsa}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">HBA</div>
+                            <div class="property-value ${getHBAClass(mol.hba)}">${mol.hba}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">HBD</div>
+                            <div class="property-value ${getHBDClass(mol.hbd)}">${mol.hbd}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">Fsp3</div>
+                            <div class="property-value">${mol.fsp3}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">RotB</div>
+                            <div class="property-value ${getRotBClass(mol.rotBonds)}">${mol.rotBonds}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">HAC</div>
+                            <div class="property-value">${mol.hac}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">Hetero</div>
+                            <div class="property-value">${mol.hetero}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">ArRings</div>
+                            <div class="property-value">${mol.arRings}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">Stereo</div>
+                            <div class="property-value">${mol.stereo}</div>
+                        </div>
+                        <div class="property-cell">
+                            <div class="property-label">Unspec</div>
+                            <div class="property-value ${mol.unspecified > 0 ? 'warning' : ''}">${mol.unspecified}</div>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            document.getElementById('molecule-count').textContent =
+                `${moleculesData.length} mol${moleculesData.length !== 1 ? 's' : ''}`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeJs(text) {
+            return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        // Lipinski/drug-likeness highlighting
+        function getMWClass(mw) {
+            const val = parseFloat(mw);
+            if (isNaN(val)) return '';
+            if (val > 500) return 'alert';
+            if (val > 450) return 'warning';
+            return '';
+        }
+
+        function getLogPClass(logp) {
+            const val = parseFloat(logp);
+            if (isNaN(val)) return '';
+            if (val > 5) return 'alert';
+            if (val > 4) return 'warning';
+            return '';
+        }
+
+        function getTPSAClass(tpsa) {
+            const val = parseFloat(tpsa);
+            if (isNaN(val)) return '';
+            if (val > 140) return 'alert';
+            if (val > 120) return 'warning';
+            return '';
+        }
+
+        function getHBAClass(hba) {
+            const val = parseInt(hba);
+            if (isNaN(val)) return '';
+            if (val > 10) return 'alert';
+            if (val > 8) return 'warning';
+            return '';
+        }
+
+        function getHBDClass(hbd) {
+            const val = parseInt(hbd);
+            if (isNaN(val)) return '';
+            if (val > 5) return 'alert';
+            if (val > 4) return 'warning';
+            return '';
+        }
+
+        function getRotBClass(rotb) {
+            const val = parseInt(rotb);
+            if (isNaN(val)) return '';
+            if (val > 10) return 'alert';
+            if (val > 7) return 'warning';
+            return '';
+        }
+
+        // Panel toggle
+        document.getElementById('panel-toggle').addEventListener('click', () => {
+            const panel = document.getElementById('properties-panel');
+            const toggle = document.getElementById('panel-toggle');
+            panel.classList.toggle('collapsed');
+            toggle.querySelector('span').textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+        });
+
+        // Handle Enter key in SMILES input
+        document.getElementById('smiles-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                loadSmiles();
+            }
+        });
+
+        // Initialize
+        initRDKit();
+        initKetcher();
+    </script>
+</body>
+</html>
