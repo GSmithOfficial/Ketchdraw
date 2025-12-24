@@ -423,9 +423,6 @@
         </div>
     </div>
 
-    <!-- Load RDKit -->
-    <script src="https://unpkg.com/@rdkit/rdkit@2024.3.5/dist/RDKit_minimal.js"></script>
-
     <script>
         let RDKit = null;
         let ketcherInstance = null;
@@ -434,10 +431,38 @@
         let isKetcherReady = false;
         let pollingInterval = null;
 
+        // Load RDKit dynamically
+        async function loadRDKitScript() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
         // Initialize RDKit
         async function initRDKit() {
             try {
-                document.getElementById('loading-status').textContent = 'Loading RDKit (may take a moment)...';
+                document.getElementById('loading-status').textContent = 'Loading RDKit script...';
+
+                // First load the script
+                await loadRDKitScript();
+
+                document.getElementById('loading-status').textContent = 'Initializing RDKit (may take a moment)...';
+
+                // Wait for initRDKitModule to be available
+                let attempts = 0;
+                while (!window.initRDKitModule && attempts < 50) {
+                    await new Promise(r => setTimeout(r, 100));
+                    attempts++;
+                }
+
+                if (!window.initRDKitModule) {
+                    throw new Error('initRDKitModule not found after loading script');
+                }
+
                 RDKit = await window.initRDKitModule();
                 console.log('RDKit initialized:', RDKit.version());
                 isRDKitReady = true;
