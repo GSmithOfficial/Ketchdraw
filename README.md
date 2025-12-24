@@ -1,10 +1,10 @@
 # KetchDraw
 
-A free, open-source ChemDraw alternative built with JSME and RDKit.js. Draw molecular structures and see calculated properties in real-time.
+A free, open-source ChemDraw alternative built with Ketcher and RDKit.js. Draw molecular structures and see calculated properties in real-time.
 
 ## Features
 
-- **JSME Molecule Editor**: Full-featured 2D molecular structure editor that works directly in the browser
+- **Ketcher Molecule Editor**: Full-featured 2D molecular structure editor from EPAM
 - **Live Property Calculations**: Properties update instantly as you draw using RDKit.js
 - **Structure Preview**: RDKit renders SVG previews of each molecule in the properties panel
 - **Multiple Molecule Support**: Draw multiple disconnected fragments to see properties for each
@@ -39,9 +39,7 @@ A free, open-source ChemDraw alternative built with JSME and RDKit.js. Draw mole
 
 ### Local Development
 
-Simply open `index.html` in a modern web browser. No build step required.
-
-For best results, serve via a local HTTP server:
+Serve via a local HTTP server (required for iframe to work):
 
 ```bash
 # Python 3
@@ -56,10 +54,10 @@ Then visit `http://localhost:8000`
 ## Drawing Tips
 
 - Click and drag to draw bonds
-- Use the element buttons to change atom types
-- Click on atoms/bonds to modify them
+- Use the element toolbar to change atom types
+- Use templates for common ring structures
 - Draw disconnected fragments for multiple molecules
-- Use the Clear button to start fresh
+- Use the eraser tool or select and delete to remove atoms/bonds
 
 ## Drug-Likeness Rules (Lipinski's Rule of Five)
 
@@ -79,12 +77,8 @@ Properties are color-coded based on oral bioavailability guidelines:
 
 ## Technology Stack
 
-- [JSME](https://jsme-editor.github.io/) - JavaScript Molecular Editor
+- [Ketcher](https://github.com/epam/ketcher) - Molecular structure editor by EPAM
 - [RDKit.js](https://github.com/rdkit/rdkit-js) - Cheminformatics toolkit for JavaScript
-
-## Why JSME instead of Ketcher?
-
-Ketcher is an excellent editor but requires a React build toolchain and cannot be easily embedded in a static HTML page. JSME was designed specifically for easy web embedding and works directly from CDN without any build step - perfect for GitHub Pages.
 
 ## License
 
@@ -92,5 +86,5 @@ MIT License - free to use and modify.
 
 ## Acknowledgments
 
-- Peter Ertl and Bruno Bienfait for JSME
+- EPAM for the excellent Ketcher editor
 - RDKit community for the JavaScript/WebAssembly port
