@@ -39,77 +39,86 @@
             width: 100vw;
         }
 
-        #ketcher-container {
+        #editor-container {
             flex: 1;
             height: 100%;
-            position: relative;
             display: flex;
             flex-direction: column;
+            background: #f5f5f5;
         }
 
-        #ketcher-frame {
+        #jsme-container {
             flex: 1;
-            width: 100%;
-            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
         }
 
-        .smiles-input-bar {
+        .toolbar {
             display: flex;
             gap: 8px;
             padding: 8px 12px;
             background: var(--bg-tertiary);
-            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            align-items: center;
         }
 
-        .smiles-input {
+        .toolbar-title {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: auto;
+        }
+
+        .smiles-display {
             flex: 1;
-            padding: 8px 12px;
+            max-width: 400px;
+            padding: 6px 10px;
             border: 1px solid var(--border);
             border-radius: 4px;
             background: var(--bg-card);
             color: var(--text-primary);
             font-family: monospace;
-            font-size: 12px;
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .smiles-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .smiles-btn {
-            padding: 8px 16px;
+        .toolbar-btn {
+            padding: 6px 12px;
             border: none;
             border-radius: 4px;
             background: var(--accent);
             color: white;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             transition: background 0.2s;
         }
 
-        .smiles-btn:hover {
+        .toolbar-btn:hover {
             background: #c73e55;
         }
 
-        .smiles-btn.secondary {
+        .toolbar-btn.secondary {
             background: var(--bg-card);
             border: 1px solid var(--border);
         }
 
-        .smiles-btn.secondary:hover {
+        .toolbar-btn.secondary:hover {
             background: var(--border);
         }
 
         .properties-panel {
-            width: 260px;
-            min-width: 260px;
+            width: 280px;
+            min-width: 280px;
             background: var(--bg-secondary);
             color: var(--text-primary);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease, width 0.3s ease, min-width 0.3s ease;
+            transition: width 0.3s ease, min-width 0.3s ease;
             border-left: 1px solid var(--bg-tertiary);
             position: relative;
         }
@@ -146,10 +155,10 @@
         }
 
         .panel-header {
-            padding: 10px 14px;
+            padding: 12px 16px;
             background: var(--bg-tertiary);
             font-weight: 600;
-            font-size: 13px;
+            font-size: 14px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -157,38 +166,38 @@
         }
 
         .panel-header svg {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
         }
 
         .molecules-list {
             flex: 1;
             overflow-y: auto;
-            padding: 6px;
+            padding: 8px;
         }
 
         .molecule-card {
             background: var(--bg-card);
-            border-radius: 6px;
-            margin-bottom: 6px;
+            border-radius: 8px;
+            margin-bottom: 8px;
             overflow: hidden;
             border: 1px solid var(--bg-tertiary);
         }
 
         .molecule-header {
-            padding: 6px 10px;
+            padding: 8px 12px;
             background: var(--bg-tertiary);
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             display: flex;
             justify-content: space-between;
             align-items: center;
             color: var(--accent);
-            gap: 6px;
+            gap: 8px;
         }
 
         .molecule-smiles {
-            font-size: 9px;
+            font-size: 10px;
             color: var(--text-secondary);
             font-family: monospace;
             flex: 1;
@@ -199,7 +208,7 @@
 
         .properties-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 1px;
             background: var(--bg-tertiary);
             padding: 1px;
@@ -207,20 +216,20 @@
 
         .property-cell {
             background: var(--bg-card);
-            padding: 4px 6px;
+            padding: 6px 8px;
             text-align: center;
         }
 
         .property-label {
-            font-size: 8px;
+            font-size: 9px;
             color: var(--text-secondary);
             text-transform: uppercase;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
             letter-spacing: 0.3px;
         }
 
         .property-value {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             color: var(--success);
         }
@@ -235,20 +244,20 @@
 
         .no-molecules {
             text-align: center;
-            padding: 30px 16px;
+            padding: 40px 20px;
             color: #555;
         }
 
         .no-molecules svg {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 10px;
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
             opacity: 0.4;
         }
 
         .no-molecules p {
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
         .loading-overlay {
@@ -285,19 +294,19 @@
         .loading-text {
             margin-top: 16px;
             color: var(--text-primary);
-            font-size: 13px;
+            font-size: 14px;
         }
 
         .loading-subtext {
-            margin-top: 6px;
+            margin-top: 8px;
             color: var(--text-secondary);
-            font-size: 11px;
+            font-size: 12px;
         }
 
         .status-bar {
-            padding: 6px 12px;
+            padding: 8px 16px;
             background: var(--bg-tertiary);
-            font-size: 10px;
+            font-size: 11px;
             color: var(--text-secondary);
             border-top: 1px solid var(--border);
             display: flex;
@@ -307,12 +316,12 @@
         .status-indicator {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
 
         .status-dot {
-            width: 7px;
-            height: 7px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: var(--accent);
         }
@@ -323,7 +332,7 @@
 
         /* Custom scrollbar */
         .molecules-list::-webkit-scrollbar {
-            width: 5px;
+            width: 6px;
         }
 
         .molecules-list::-webkit-scrollbar-track {
@@ -344,8 +353,8 @@
             border: none;
             color: var(--text-secondary);
             cursor: pointer;
-            padding: 2px 4px;
-            font-size: 10px;
+            padding: 2px 6px;
+            font-size: 12px;
             opacity: 0.7;
             transition: opacity 0.2s;
             flex-shrink: 0;
@@ -356,13 +365,18 @@
             color: var(--success);
         }
 
-        .help-text {
-            font-size: 10px;
-            color: var(--text-secondary);
-            padding: 8px 12px;
-            background: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            line-height: 1.4;
+        .structure-preview {
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            margin: 8px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .structure-preview svg {
+            max-width: 100%;
+            height: auto;
         }
     </style>
 </head>
@@ -370,16 +384,19 @@
     <div class="loading-overlay" id="loading">
         <div class="loading-spinner"></div>
         <div class="loading-text">Loading KetchDraw...</div>
-        <div class="loading-subtext" id="loading-status">Initializing RDKit...</div>
+        <div class="loading-subtext" id="loading-status">Initializing...</div>
     </div>
 
     <div class="container">
-        <div id="ketcher-container">
-            <iframe id="ketcher-frame" src="https://lifescience.opensource.epam.com/ketcher/demo.html"></iframe>
-            <div class="smiles-input-bar">
-                <input type="text" class="smiles-input" id="smiles-input" placeholder="Enter SMILES (e.g., CCO for ethanol, or CCO.C=O for multiple molecules)">
-                <button class="smiles-btn" onclick="loadSmiles()">Load</button>
-                <button class="smiles-btn secondary" onclick="getSmiles()">Get SMILES</button>
+        <div id="editor-container">
+            <div class="toolbar">
+                <span class="toolbar-title">⚗️ KetchDraw</span>
+                <input type="text" class="smiles-display" id="smiles-display" placeholder="SMILES will appear here..." readonly>
+                <button class="toolbar-btn secondary" onclick="copySmiles()" title="Copy SMILES">📋 Copy</button>
+                <button class="toolbar-btn secondary" onclick="clearEditor()" title="Clear structure">🗑️ Clear</button>
+            </div>
+            <div id="jsme-container">
+                <div id="jsme"></div>
             </div>
         </div>
 
@@ -392,11 +409,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0-6v6"/>
                 </svg>
-                Properties
-            </div>
-
-            <div class="help-text">
-                Enter SMILES below or draw in Ketcher, then click "Get SMILES" to calculate properties. Use "." to separate multiple molecules.
+                Molecular Properties
             </div>
 
             <div class="molecules-list" id="molecules-list">
@@ -409,7 +422,7 @@
                         <circle cx="20" cy="16" r="2"/>
                         <path d="M6 8h3M15 8h3M6 16h3M15 16h3M12 9V6M12 18v-3"/>
                     </svg>
-                    <p>Draw a molecule or enter SMILES to see properties</p>
+                    <p>Draw a molecule to see its properties</p>
                 </div>
             </div>
 
@@ -423,16 +436,39 @@
         </div>
     </div>
 
+    <!-- JSME Molecular Editor -->
+    <script src="https://unpkg.com/jsme-editor@2024.4.29/jsme/jsme.nocache.js"></script>
+
     <script>
         let RDKit = null;
-        let ketcherInstance = null;
+        let jsmeApplet = null;
         let lastSmiles = '';
         let isRDKitReady = false;
-        let isKetcherReady = false;
-        let pollingInterval = null;
+        let isJSMEReady = false;
 
         // RDKit CDN base URL
         const RDKIT_CDN_BASE = 'https://unpkg.com/@rdkit/rdkit/dist/';
+
+        // Called by JSME when it's ready
+        function jsmeOnLoad() {
+            console.log('JSME loaded');
+
+            // Get container dimensions
+            const container = document.getElementById('jsme-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Initialize JSME with optimal size
+            jsmeApplet = new JSApplet.JSME('jsme', Math.min(width - 20, 800) + 'px', Math.min(height - 20, 600) + 'px', {
+                options: 'query,hydrogens,stereo,nocanonize,nopaste'
+            });
+
+            // Set up change callback
+            jsmeApplet.setCallBack('AfterStructureModified', onStructureChanged);
+
+            isJSMEReady = true;
+            checkReady();
+        }
 
         // Load RDKit dynamically
         async function loadRDKitScript() {
@@ -448,14 +484,12 @@
         // Initialize RDKit
         async function initRDKit() {
             try {
-                document.getElementById('loading-status').textContent = 'Loading RDKit script...';
-
-                // First load the script
+                document.getElementById('loading-status').textContent = 'Loading RDKit...';
                 await loadRDKitScript();
 
-                document.getElementById('loading-status').textContent = 'Initializing RDKit (may take a moment)...';
+                document.getElementById('loading-status').textContent = 'Initializing RDKit (this may take a moment)...';
 
-                // Wait for initRDKitModule to be available
+                // Wait for initRDKitModule
                 let attempts = 0;
                 while (!window.initRDKitModule && attempts < 100) {
                     await new Promise(r => setTimeout(r, 100));
@@ -463,63 +497,28 @@
                 }
 
                 if (!window.initRDKitModule) {
-                    throw new Error('initRDKitModule not found after loading script');
+                    throw new Error('RDKit module not found');
                 }
 
-                // Initialize with locateFile to find WASM
                 RDKit = await window.initRDKitModule({
                     locateFile: (file) => RDKIT_CDN_BASE + file
                 });
 
                 console.log('RDKit initialized:', RDKit.version());
                 isRDKitReady = true;
-                document.getElementById('loading-status').textContent = 'RDKit ready, loading Ketcher...';
+                document.getElementById('loading-status').textContent = 'Loading molecule editor...';
                 checkReady();
             } catch (error) {
-                console.error('Failed to initialize RDKit:', error);
+                console.error('RDKit failed:', error);
+                document.getElementById('loading-status').textContent = 'RDKit failed: ' + error.message;
                 updateStatus('RDKit failed', false);
-                document.getElementById('loading-status').textContent = 'RDKit failed to load: ' + error.message;
             }
         }
 
-        // Initialize Ketcher
-        function initKetcher() {
-            const frame = document.getElementById('ketcher-frame');
-
-            frame.onload = () => {
-                // Wait for Ketcher to be ready
-                const checkInterval = setInterval(() => {
-                    try {
-                        if (frame.contentWindow && frame.contentWindow.ketcher) {
-                            ketcherInstance = frame.contentWindow.ketcher;
-                            console.log('Ketcher connected');
-                            clearInterval(checkInterval);
-                            isKetcherReady = true;
-                            checkReady();
-                            startPolling();
-                        }
-                    } catch (e) {
-                        // Cross-origin - will need manual SMILES entry
-                        console.log('Ketcher cross-origin, using manual mode');
-                    }
-                }, 500);
-
-                // Timeout - mark as ready anyway
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                    if (!isKetcherReady) {
-                        isKetcherReady = true;
-                        checkReady();
-                        console.log('Ketcher ready (manual mode)');
-                    }
-                }, 5000);
-            };
-        }
-
         function checkReady() {
-            if (isRDKitReady && isKetcherReady) {
+            if (isRDKitReady && isJSMEReady) {
                 document.getElementById('loading').classList.add('hidden');
-                updateStatus(ketcherInstance ? 'Connected' : 'Manual mode', true);
+                updateStatus('Ready', true);
             }
         }
 
@@ -528,59 +527,36 @@
             document.getElementById('status-dot').classList.toggle('ready', ready);
         }
 
-        // Poll for molecule changes (when Ketcher is accessible)
-        function startPolling() {
-            if (!ketcherInstance) return;
+        // Called when structure changes in JSME
+        function onStructureChanged(jsme) {
+            const smiles = jsme.smiles();
+            document.getElementById('smiles-display').value = smiles;
 
-            pollingInterval = setInterval(async () => {
-                try {
-                    const smiles = await ketcherInstance.getSmiles();
-                    if (smiles !== lastSmiles) {
-                        lastSmiles = smiles;
-                        document.getElementById('smiles-input').value = smiles;
-                        calculateProperties(smiles);
-                    }
-                } catch (e) {
-                    // Silently handle errors
-                }
-            }, 500);
-        }
-
-        // Load SMILES into Ketcher
-        async function loadSmiles() {
-            const smiles = document.getElementById('smiles-input').value.trim();
-            if (!smiles) return;
-
-            if (ketcherInstance) {
-                try {
-                    await ketcherInstance.setMolecule(smiles);
-                } catch (e) {
-                    console.error('Failed to load SMILES into Ketcher:', e);
-                }
+            if (smiles !== lastSmiles) {
+                lastSmiles = smiles;
+                calculateProperties(smiles);
             }
-
-            calculateProperties(smiles);
         }
 
-        // Get SMILES from Ketcher
-        async function getSmiles() {
-            if (ketcherInstance) {
-                try {
-                    const smiles = await ketcherInstance.getSmiles();
-                    document.getElementById('smiles-input').value = smiles;
-                    calculateProperties(smiles);
-                } catch (e) {
-                    console.error('Failed to get SMILES from Ketcher:', e);
-                    alert('Could not retrieve SMILES from Ketcher. Please enter SMILES manually.');
-                }
-            } else {
-                // Use what's in the input field
-                const smiles = document.getElementById('smiles-input').value.trim();
-                if (smiles) {
-                    calculateProperties(smiles);
-                } else {
-                    alert('Please enter a SMILES string in the input field.');
-                }
+        function copySmiles() {
+            const smiles = document.getElementById('smiles-display').value;
+            if (smiles) {
+                navigator.clipboard.writeText(smiles).then(() => {
+                    // Visual feedback
+                    const btn = event.target;
+                    const originalText = btn.textContent;
+                    btn.textContent = '✓ Copied!';
+                    setTimeout(() => btn.textContent = originalText, 1500);
+                });
+            }
+        }
+
+        function clearEditor() {
+            if (jsmeApplet) {
+                jsmeApplet.reset();
+                document.getElementById('smiles-display').value = '';
+                lastSmiles = '';
+                showNoMolecules();
             }
         }
 
@@ -591,7 +567,7 @@
                 return;
             }
 
-            // Split by '.' to handle multiple molecules (fragments)
+            // Split by '.' for multiple molecules
             const smilesList = smilesString.split('.').filter(s => s.trim() !== '');
 
             if (smilesList.length === 0) {
@@ -601,23 +577,17 @@
 
             const moleculesData = [];
 
-            for (let i = 0; i < smilesList.length; i++) {
-                const smiles = smilesList[i].trim();
-                if (!smiles) continue;
-
+            for (const smiles of smilesList) {
                 try {
-                    const mol = RDKit.get_mol(smiles);
+                    const mol = RDKit.get_mol(smiles.trim());
                     if (mol) {
-                        const props = calculateMolProps(mol, smiles);
+                        const props = calculateMolProps(mol, smiles.trim());
                         moleculesData.push(props);
                         mol.delete();
                     }
                 } catch (e) {
-                    console.error('Error processing molecule:', smiles, e);
-                    moleculesData.push({
-                        smiles: smiles,
-                        error: true
-                    });
+                    console.error('Error processing:', smiles, e);
+                    moleculesData.push({ smiles: smiles.trim(), error: true });
                 }
             }
 
@@ -630,19 +600,17 @@
             // Count stereocenters from SMILES
             const definedStereo = (smiles.match(/@@?/g) || []).length;
 
-            // Try to detect unspecified stereo (simplified)
-            let unspecifiedStereo = 0;
+            // Get SVG for preview
+            let svg = '';
             try {
-                const chiralInfo = mol.get_stereo_tags ? mol.get_stereo_tags() : '';
-                if (chiralInfo && chiralInfo.includes('?')) {
-                    unspecifiedStereo = (chiralInfo.match(/\?/g) || []).length;
-                }
+                svg = mol.get_svg(200, 150);
             } catch (e) {
-                // Ignore stereo detection errors
+                console.warn('SVG generation failed');
             }
 
             return {
                 smiles: smiles,
+                svg: svg,
                 mw: descriptors.exactmw ? parseFloat(descriptors.exactmw).toFixed(1) : 'N/A',
                 clogp: descriptors.CrippenClogP ? parseFloat(descriptors.CrippenClogP).toFixed(2) : 'N/A',
                 tpsa: descriptors.tpsa ? parseFloat(descriptors.tpsa).toFixed(0) : 'N/A',
@@ -654,7 +622,7 @@
                 hetero: descriptors.NumHeteroatoms ?? 'N/A',
                 arRings: descriptors.NumAromaticRings ?? 'N/A',
                 stereo: definedStereo,
-                unspecified: unspecifiedStereo
+                unspecified: 0
             };
         }
 
@@ -669,16 +637,14 @@
                         <circle cx="20" cy="16" r="2"/>
                         <path d="M6 8h3M15 8h3M6 16h3M15 16h3M12 9V6M12 18v-3"/>
                     </svg>
-                    <p>Draw a molecule or enter SMILES to see properties</p>
+                    <p>Draw a molecule to see its properties</p>
                 </div>
             `;
             document.getElementById('molecule-count').textContent = '0 molecules';
         }
 
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                // Visual feedback could be added here
-            }).catch(err => console.error('Copy failed:', err));
+            navigator.clipboard.writeText(text);
         }
 
         function renderMolecules(moleculesData) {
@@ -695,7 +661,7 @@
                         <div class="molecule-card">
                             <div class="molecule-header">
                                 <span>Mol ${index + 1}</span>
-                                <span class="molecule-smiles" style="color: var(--accent);">Invalid SMILES</span>
+                                <span class="molecule-smiles" style="color: var(--accent);">Invalid structure</span>
                             </div>
                         </div>
                     `;
@@ -707,6 +673,7 @@
                         <span class="molecule-smiles" title="${escapeHtml(mol.smiles)}">${escapeHtml(mol.smiles)}</span>
                         <button class="copy-btn" onclick="copyToClipboard('${escapeJs(mol.smiles)}')" title="Copy SMILES">📋</button>
                     </div>
+                    ${mol.svg ? `<div class="structure-preview">${mol.svg}</div>` : ''}
                     <div class="properties-grid">
                         <div class="property-cell">
                             <div class="property-label">MW</div>
@@ -761,7 +728,7 @@
             `}).join('');
 
             document.getElementById('molecule-count').textContent =
-                `${moleculesData.length} mol${moleculesData.length !== 1 ? 's' : ''}`;
+                `${moleculesData.length} molecule${moleculesData.length !== 1 ? 's' : ''}`;
         }
 
         function escapeHtml(text) {
@@ -774,7 +741,7 @@
             return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         }
 
-        // Lipinski/drug-likeness highlighting
+        // Lipinski highlighting functions
         function getMWClass(mw) {
             const val = parseFloat(mw);
             if (isNaN(val)) return '';
@@ -831,16 +798,18 @@
             toggle.querySelector('span').textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
         });
 
-        // Handle Enter key in SMILES input
-        document.getElementById('smiles-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                loadSmiles();
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (jsmeApplet) {
+                const container = document.getElementById('jsme-container');
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                jsmeApplet.setSize(Math.min(width - 20, 800) + 'px', Math.min(height - 20, 600) + 'px');
             }
         });
 
         // Initialize
         initRDKit();
-        initKetcher();
     </script>
 </body>
 </html>

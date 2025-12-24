@@ -1,22 +1,23 @@
 # KetchDraw
 
-A free, open-source ChemDraw alternative built with Ketcher and RDKit.js. Draw molecular structures and see calculated properties in real-time.
+A free, open-source ChemDraw alternative built with JSME and RDKit.js. Draw molecular structures and see calculated properties in real-time.
 
 ## Features
 
-- **Ketcher Molecule Editor**: Full-featured 2D molecular structure editor
-- **Live Property Calculations**: Properties update as you draw using RDKit.js
-- **Multiple Molecule Support**: Draw multiple molecules (separated as fragments) and see properties for each
+- **JSME Molecule Editor**: Full-featured 2D molecular structure editor that works directly in the browser
+- **Live Property Calculations**: Properties update instantly as you draw using RDKit.js
+- **Structure Preview**: RDKit renders SVG previews of each molecule in the properties panel
+- **Multiple Molecule Support**: Draw multiple disconnected fragments to see properties for each
 - **Drug-likeness Highlighting**: Properties violating Lipinski's rules are highlighted in yellow/red
 - **Collapsible Panel**: Maximize drawing space by collapsing the properties panel
-- **Copy SMILES**: One-click copy of SMILES strings for each molecule
+- **Copy SMILES**: One-click copy of SMILES strings
 
 ## Calculated Properties
 
 | Property | Description |
 |----------|-------------|
 | MW | Molecular Weight |
-| cLogP | Calculated LogP (Crippen) |
+| cLogP | Calculated LogP (Crippen method) |
 | TPSA | Topological Polar Surface Area |
 | HBA | Hydrogen Bond Acceptors |
 | HBD | Hydrogen Bond Donors |
@@ -52,13 +53,13 @@ npx serve
 
 Then visit `http://localhost:8000`
 
-## Drawing Multiple Molecules
+## Drawing Tips
 
-To draw multiple molecules and see individual properties:
-1. Draw your first molecule
-2. Use the "New" tool or click on empty canvas space
-3. Draw your second molecule without connecting to the first
-4. Each disconnected fragment will show as a separate molecule in the properties panel
+- Click and drag to draw bonds
+- Use the element buttons to change atom types
+- Click on atoms/bonds to modify them
+- Draw disconnected fragments for multiple molecules
+- Use the Clear button to start fresh
 
 ## Drug-Likeness Rules (Lipinski's Rule of Five)
 
@@ -78,8 +79,12 @@ Properties are color-coded based on oral bioavailability guidelines:
 
 ## Technology Stack
 
-- [Ketcher](https://github.com/epam/ketcher) - Molecular structure editor by EPAM
+- [JSME](https://jsme-editor.github.io/) - JavaScript Molecular Editor
 - [RDKit.js](https://github.com/rdkit/rdkit-js) - Cheminformatics toolkit for JavaScript
+
+## Why JSME instead of Ketcher?
+
+Ketcher is an excellent editor but requires a React build toolchain and cannot be easily embedded in a static HTML page. JSME was designed specifically for easy web embedding and works directly from CDN without any build step - perfect for GitHub Pages.
 
 ## License
 
@@ -87,5 +92,5 @@ MIT License - free to use and modify.
 
 ## Acknowledgments
 
-- EPAM for the excellent Ketcher editor
+- Peter Ertl and Bruno Bienfait for JSME
 - RDKit community for the JavaScript/WebAssembly port
