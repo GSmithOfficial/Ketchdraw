@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KetchDraw - Molecular Structure Editor</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚗️</text></svg>">
+    <!-- Chart.js for radar plots -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -88,7 +90,7 @@
         /* Toggle button - positioned outside the panel */
         .panel-toggle {
             position: absolute;
-            right: 280px;
+            right: 320px;
             top: 50%;
             transform: translateY(-50%);
             width: 28px;
@@ -115,7 +117,7 @@
         }
 
         .properties-panel {
-            width: 280px;
+            width: 320px;
             background: var(--bg-secondary);
             color: var(--text-primary);
             display: flex;
@@ -137,9 +139,15 @@
             font-size: 14px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
             border-bottom: 1px solid var(--border);
             white-space: nowrap;
+        }
+
+        .panel-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .panel-header svg {
@@ -148,10 +156,51 @@
             flex-shrink: 0;
         }
 
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+        }
+
+        .view-toggle button {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .view-toggle button:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .view-toggle button.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
         .molecules-list {
             flex: 1;
             overflow-y: auto;
             padding: 8px;
+        }
+
+        .radar-container {
+            flex: 1;
+            padding: 16px;
+            display: none;
+        }
+
+        .radar-container.active {
+            display: block;
+        }
+
+        .molecules-list.hidden {
+            display: none;
         }
 
         .molecule-card {
@@ -357,6 +406,37 @@
             max-width: 100%;
             height: auto;
         }
+
+        #radar-chart {
+            max-height: 400px;
+        }
+
+        .radar-legend {
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            font-size: 11px;
+        }
+
+        .radar-legend-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .radar-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .radar-legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -383,10 +463,16 @@
 
         <div class="properties-panel" id="properties-panel">
             <div class="panel-header">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0-6v6"/>
-                </svg>
-                Molecular Properties
+                <div class="panel-header-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0-6v6"/>
+                    </svg>
+                    Properties
+                </div>
+                <div class="view-toggle">
+                    <button id="view-cards" class="active" title="Card View">Cards</button>
+                    <button id="view-radar" title="Radar Plot">Radar</button>
+                </div>
             </div>
 
             <div class="molecules-list" id="molecules-list">
@@ -403,6 +489,11 @@
                 </div>
             </div>
 
+            <div class="radar-container" id="radar-container">
+                <canvas id="radar-chart"></canvas>
+                <div class="radar-legend" id="radar-legend"></div>
+            </div>
+
             <div class="status-bar">
                 <div class="status-indicator">
                     <div class="status-dot" id="status-dot"></div>
@@ -416,17 +507,40 @@
     <script>
         let RDKit = null;
         let ketcherInstance = null;
-        let lastSmiles = '';
-        let lastStableSmiles = '';
+        let lastCommittedSmiles = ''; // Only stores actually committed/placed molecules
         let isRDKitReady = false;
         let isKetcherReady = false;
-        let debounceTimer = null;
-        let stableCount = 0;
-        let consecutiveStableCount = 0;
-        const STABILITY_THRESHOLD = 5; // Require 5 consecutive stable readings (500ms at 100ms interval)
+        let currentMolecules = [];
+        let radarChart = null;
+        let currentView = 'cards'; // 'cards' or 'radar'
+        let pendingUpdate = false;
+        let userHasInteracted = false;
 
         // RDKit CDN base URL
         const RDKIT_CDN_BASE = 'https://unpkg.com/@rdkit/rdkit/dist/';
+
+        // Radar chart ranges (with min and max)
+        const RADAR_RANGES = {
+            mw: { min: 0, max: 600, label: 'MW' },
+            clogp: { min: -1, max: 6, label: 'cLogP' },
+            tpsa: { min: 0, max: 140, label: 'TPSA' },
+            fsp3: { min: 0, max: 1, label: 'Fsp3' },
+            hba: { min: 0, max: 10, label: 'HBA' },
+            hbd: { min: 0, max: 5, label: 'HBD' },
+            rotBonds: { min: 0, max: 10, label: 'RotB' },
+            arRings: { min: 0, max: 5, label: 'ArRings' },
+            stereo: { min: 0, max: 4, label: 'Stereo' },
+            unspecified: { min: 0, max: 4, label: 'Unspec' }
+        };
+
+        // Colors for multiple molecules in radar
+        const MOLECULE_COLORS = [
+            { bg: 'rgba(233, 69, 96, 0.3)', border: 'rgba(233, 69, 96, 1)' },
+            { bg: 'rgba(78, 204, 163, 0.3)', border: 'rgba(78, 204, 163, 1)' },
+            { bg: 'rgba(255, 193, 7, 0.3)', border: 'rgba(255, 193, 7, 1)' },
+            { bg: 'rgba(100, 149, 237, 0.3)', border: 'rgba(100, 149, 237, 1)' },
+            { bg: 'rgba(186, 85, 211, 0.3)', border: 'rgba(186, 85, 211, 1)' }
+        ];
 
         // Load RDKit dynamically
         async function loadRDKitScript() {
@@ -483,7 +597,7 @@
                     ketcherInstance = frame.contentWindow.ketcher;
                     isKetcherReady = true;
                     checkReady();
-                    startPolling();
+                    setupInteractionDetection();
                 }
             });
 
@@ -497,7 +611,7 @@
                             if (!isKetcherReady) {
                                 isKetcherReady = true;
                                 checkReady();
-                                startPolling();
+                                setupInteractionDetection();
                             }
                         }
                     } catch (e) {
@@ -505,6 +619,81 @@
                     }
                 }, 2000);
             };
+        }
+
+        // Setup interaction detection - only update after actual user interaction
+        function setupInteractionDetection() {
+            const frame = document.getElementById('ketcher-frame');
+
+            // Detect mouse clicks on the iframe
+            // When iframe is focused and user clicks, we trigger an update check
+            frame.addEventListener('mouseenter', () => {
+                userHasInteracted = false;
+            });
+
+            // Use a focus-based approach: when user clicks in Ketcher, it gets focus
+            // We detect blur (leaving Ketcher) to trigger update
+            window.addEventListener('blur', () => {
+                // Window lost focus, might be interacting with Ketcher iframe
+            });
+
+            // Detect when user is done interacting (mouse leaves iframe area)
+            frame.addEventListener('mouseleave', () => {
+                if (userHasInteracted) {
+                    triggerDelayedUpdate();
+                }
+            });
+
+            // Listen for mouseup events which indicate structure placement
+            document.addEventListener('mouseup', (e) => {
+                // Check if the click was likely in the Ketcher area
+                const frameRect = frame.getBoundingClientRect();
+                if (e.clientX >= frameRect.left && e.clientX <= frameRect.right &&
+                    e.clientY >= frameRect.top && e.clientY <= frameRect.bottom) {
+                    userHasInteracted = true;
+                    triggerDelayedUpdate();
+                }
+            });
+
+            // Also listen for keyboard events (for delete, paste, etc.)
+            document.addEventListener('keyup', (e) => {
+                if (['Delete', 'Backspace', 'Enter', 'v', 'V', 'z', 'Z'].includes(e.key)) {
+                    userHasInteracted = true;
+                    triggerDelayedUpdate();
+                }
+            });
+
+            // Periodic check as fallback, but only update if structure actually changed
+            setInterval(() => {
+                checkForCommittedChanges();
+            }, 1000);
+        }
+
+        let updateTimer = null;
+        function triggerDelayedUpdate() {
+            // Clear any pending update
+            if (updateTimer) clearTimeout(updateTimer);
+
+            // Wait a bit after interaction for Ketcher to finalize the structure
+            updateTimer = setTimeout(() => {
+                checkForCommittedChanges();
+            }, 300);
+        }
+
+        async function checkForCommittedChanges() {
+            if (!ketcherInstance || !isRDKitReady) return;
+
+            try {
+                const smiles = await ketcherInstance.getSmiles();
+
+                // Only update if SMILES actually changed from last committed state
+                if (smiles !== lastCommittedSmiles) {
+                    lastCommittedSmiles = smiles;
+                    calculateProperties(smiles);
+                }
+            } catch (e) {
+                // Silently handle errors
+            }
         }
 
         function checkReady() {
@@ -519,39 +708,11 @@
             document.getElementById('status-dot').classList.toggle('ready', ready);
         }
 
-        // Poll for molecule changes with stability detection to avoid hover previews
-        function startPolling() {
-            setInterval(async () => {
-                if (!ketcherInstance) return;
-
-                try {
-                    const smiles = await ketcherInstance.getSmiles();
-
-                    // If SMILES changed, reset stability counter
-                    if (smiles !== lastSmiles) {
-                        lastSmiles = smiles;
-                        consecutiveStableCount = 0;
-                    } else {
-                        // SMILES stayed the same - increment stability counter
-                        consecutiveStableCount++;
-
-                        // Only update after SMILES has been stable for multiple consecutive readings
-                        // This filters out hover previews which are typically transient
-                        if (consecutiveStableCount >= STABILITY_THRESHOLD && smiles !== lastStableSmiles) {
-                            lastStableSmiles = smiles;
-                            calculateProperties(smiles);
-                        }
-                    }
-                } catch (e) {
-                    // Silently handle errors during polling
-                }
-            }, 100);
-        }
-
         // Calculate molecular properties
         function calculateProperties(smilesString) {
             if (!RDKit || !smilesString || smilesString.trim() === '') {
-                showNoMolecules();
+                currentMolecules = [];
+                renderView();
                 return;
             }
 
@@ -559,27 +720,28 @@
             const smilesList = smilesString.split('.').filter(s => s.trim() !== '');
 
             if (smilesList.length === 0) {
-                showNoMolecules();
+                currentMolecules = [];
+                renderView();
                 return;
             }
 
-            const moleculesData = [];
+            currentMolecules = [];
 
             for (const smiles of smilesList) {
                 try {
                     const mol = RDKit.get_mol(smiles.trim());
                     if (mol) {
                         const props = calculateMolProps(mol, smiles.trim());
-                        moleculesData.push(props);
+                        currentMolecules.push(props);
                         mol.delete();
                     }
                 } catch (e) {
                     console.error('Error processing:', smiles, e);
-                    moleculesData.push({ smiles: smiles.trim(), error: true });
+                    currentMolecules.push({ smiles: smiles.trim(), error: true });
                 }
             }
 
-            renderMolecules(moleculesData);
+            renderView();
         }
 
         function calculateMolProps(mol, smiles) {
@@ -599,19 +761,30 @@
             return {
                 smiles: smiles,
                 svg: svg,
-                mw: descriptors.exactmw ? parseFloat(descriptors.exactmw).toFixed(1) : 'N/A',
-                clogp: descriptors.CrippenClogP ? parseFloat(descriptors.CrippenClogP).toFixed(2) : 'N/A',
-                tpsa: descriptors.tpsa ? parseFloat(descriptors.tpsa).toFixed(0) : 'N/A',
-                hba: descriptors.NumHBA ?? 'N/A',
-                hbd: descriptors.NumHBD ?? 'N/A',
-                fsp3: descriptors.FractionCSP3 ? parseFloat(descriptors.FractionCSP3).toFixed(2) : 'N/A',
-                rotBonds: descriptors.NumRotatableBonds ?? 'N/A',
-                hac: descriptors.NumHeavyAtoms ?? 'N/A',
-                hetero: descriptors.NumHeteroatoms ?? 'N/A',
-                arRings: descriptors.NumAromaticRings ?? 'N/A',
+                mw: descriptors.exactmw ? parseFloat(descriptors.exactmw) : null,
+                clogp: descriptors.CrippenClogP ? parseFloat(descriptors.CrippenClogP) : null,
+                tpsa: descriptors.tpsa ? parseFloat(descriptors.tpsa) : null,
+                hba: descriptors.NumHBA ?? null,
+                hbd: descriptors.NumHBD ?? null,
+                fsp3: descriptors.FractionCSP3 ? parseFloat(descriptors.FractionCSP3) : null,
+                rotBonds: descriptors.NumRotatableBonds ?? null,
+                hac: descriptors.NumHeavyAtoms ?? null,
+                hetero: descriptors.NumHeteroatoms ?? null,
+                arRings: descriptors.NumAromaticRings ?? null,
                 stereo: definedStereo,
                 unspecified: 0
             };
+        }
+
+        function renderView() {
+            if (currentView === 'cards') {
+                renderMolecules();
+            } else {
+                renderRadar();
+            }
+
+            document.getElementById('molecule-count').textContent =
+                `${currentMolecules.length} molecule${currentMolecules.length !== 1 ? 's' : ''}`;
         }
 
         function showNoMolecules() {
@@ -628,22 +801,27 @@
                     <p>Draw a molecule in Ketcher to see its properties</p>
                 </div>
             `;
-            document.getElementById('molecule-count').textContent = '0 molecules';
         }
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text);
         }
 
-        function renderMolecules(moleculesData) {
+        function formatValue(val, decimals = 2) {
+            if (val === null || val === undefined) return 'N/A';
+            if (typeof val === 'number') return val.toFixed(decimals);
+            return val;
+        }
+
+        function renderMolecules() {
             const container = document.getElementById('molecules-list');
 
-            if (moleculesData.length === 0) {
+            if (currentMolecules.length === 0) {
                 showNoMolecules();
                 return;
             }
 
-            container.innerHTML = moleculesData.map((mol, index) => {
+            container.innerHTML = currentMolecules.map((mol, index) => {
                 if (mol.error) {
                     return `
                         <div class="molecule-card">
@@ -665,43 +843,43 @@
                     <div class="properties-grid">
                         <div class="property-cell">
                             <div class="property-label">MW</div>
-                            <div class="property-value ${getMWClass(mol.mw)}">${mol.mw}</div>
+                            <div class="property-value ${getMWClass(mol.mw)}">${formatValue(mol.mw, 1)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">cLogP</div>
-                            <div class="property-value ${getLogPClass(mol.clogp)}">${mol.clogp}</div>
+                            <div class="property-value ${getLogPClass(mol.clogp)}">${formatValue(mol.clogp)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">TPSA</div>
-                            <div class="property-value ${getTPSAClass(mol.tpsa)}">${mol.tpsa}</div>
+                            <div class="property-value ${getTPSAClass(mol.tpsa)}">${formatValue(mol.tpsa, 0)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">HBA</div>
-                            <div class="property-value ${getHBAClass(mol.hba)}">${mol.hba}</div>
+                            <div class="property-value ${getHBAClass(mol.hba)}">${formatValue(mol.hba, 0)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">HBD</div>
-                            <div class="property-value ${getHBDClass(mol.hbd)}">${mol.hbd}</div>
+                            <div class="property-value ${getHBDClass(mol.hbd)}">${formatValue(mol.hbd, 0)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">Fsp3</div>
-                            <div class="property-value">${mol.fsp3}</div>
+                            <div class="property-value">${formatValue(mol.fsp3)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">RotB</div>
-                            <div class="property-value ${getRotBClass(mol.rotBonds)}">${mol.rotBonds}</div>
+                            <div class="property-value ${getRotBClass(mol.rotBonds)}">${formatValue(mol.rotBonds, 0)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">HAC</div>
-                            <div class="property-value">${mol.hac}</div>
+                            <div class="property-value">${formatValue(mol.hac, 0)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">Hetero</div>
-                            <div class="property-value">${mol.hetero}</div>
+                            <div class="property-value">${formatValue(mol.hetero, 0)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">ArRings</div>
-                            <div class="property-value">${mol.arRings}</div>
+                            <div class="property-value">${formatValue(mol.arRings, 0)}</div>
                         </div>
                         <div class="property-cell">
                             <div class="property-label">Stereo</div>
@@ -714,9 +892,166 @@
                     </div>
                 </div>
             `}).join('');
+        }
 
-            document.getElementById('molecule-count').textContent =
-                `${moleculesData.length} molecule${moleculesData.length !== 1 ? 's' : ''}`;
+        function renderRadar() {
+            const container = document.getElementById('radar-container');
+            const legend = document.getElementById('radar-legend');
+
+            if (currentMolecules.length === 0 || currentMolecules.every(m => m.error)) {
+                if (radarChart) {
+                    radarChart.destroy();
+                    radarChart = null;
+                }
+                legend.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Draw molecules to see radar comparison</p>';
+                return;
+            }
+
+            // Get valid molecules
+            const validMols = currentMolecules.filter(m => !m.error);
+
+            // Calculate dynamic ranges based on molecule values
+            const dynamicRanges = calculateDynamicRanges(validMols);
+
+            // Prepare labels (excluding HAC and Hetero as requested)
+            const labels = Object.keys(RADAR_RANGES).map(key => RADAR_RANGES[key].label);
+            const keys = Object.keys(RADAR_RANGES);
+
+            // Prepare datasets - normalize values to 0-100 scale
+            const datasets = validMols.map((mol, index) => {
+                const color = MOLECULE_COLORS[index % MOLECULE_COLORS.length];
+
+                const data = keys.map(key => {
+                    const val = mol[key];
+                    if (val === null || val === undefined) return 0;
+
+                    const range = dynamicRanges[key];
+                    // Normalize to 0-100 scale
+                    const normalized = ((val - range.min) / (range.max - range.min)) * 100;
+                    return Math.max(0, Math.min(100, normalized));
+                });
+
+                return {
+                    label: `Mol ${index + 1}`,
+                    data: data,
+                    backgroundColor: color.bg,
+                    borderColor: color.border,
+                    borderWidth: 2,
+                    pointBackgroundColor: color.border,
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: color.border
+                };
+            });
+
+            // Create or update chart
+            const ctx = document.getElementById('radar-chart').getContext('2d');
+
+            if (radarChart) {
+                radarChart.data.labels = labels;
+                radarChart.data.datasets = datasets;
+                radarChart.options.scales.r.pointLabels.callback = (label, index) => {
+                    const key = keys[index];
+                    const range = dynamicRanges[key];
+                    return `${label}\n(${range.min}-${range.max})`;
+                };
+                radarChart.update();
+            } else {
+                radarChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 25,
+                                    color: 'rgba(255,255,255,0.5)',
+                                    backdropColor: 'transparent',
+                                    callback: (val) => val + '%'
+                                },
+                                grid: {
+                                    color: 'rgba(255,255,255,0.1)'
+                                },
+                                angleLines: {
+                                    color: 'rgba(255,255,255,0.1)'
+                                },
+                                pointLabels: {
+                                    color: '#e0e0e0',
+                                    font: { size: 10 },
+                                    callback: (label, index) => {
+                                        const key = keys[index];
+                                        const range = dynamicRanges[key];
+                                        return `${label} (${range.min}-${range.max})`;
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        const index = context.dataIndex;
+                                        const key = keys[index];
+                                        const mol = validMols[context.datasetIndex];
+                                        const val = mol[key];
+                                        return `${context.dataset.label}: ${formatValue(val, 2)}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Update legend
+            legend.innerHTML = `
+                <div class="radar-legend-title">Molecules</div>
+                ${validMols.map((mol, index) => {
+                    const color = MOLECULE_COLORS[index % MOLECULE_COLORS.length];
+                    return `
+                        <div class="radar-legend-item">
+                            <div class="radar-legend-color" style="background: ${color.border}"></div>
+                            <span>Mol ${index + 1}: ${escapeHtml(mol.smiles.substring(0, 20))}${mol.smiles.length > 20 ? '...' : ''}</span>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function calculateDynamicRanges(molecules) {
+            const ranges = {};
+
+            for (const key of Object.keys(RADAR_RANGES)) {
+                const baseRange = RADAR_RANGES[key];
+                let max = baseRange.max;
+
+                // Check if any molecule exceeds the max
+                for (const mol of molecules) {
+                    const val = mol[key];
+                    if (val !== null && val !== undefined && val > max) {
+                        // Expand by 10%
+                        max = val * 1.1;
+                    }
+                }
+
+                ranges[key] = {
+                    min: baseRange.min,
+                    max: Math.round(max * 100) / 100 // Round to 2 decimals
+                };
+            }
+
+            return ranges;
         }
 
         function escapeHtml(text) {
@@ -731,52 +1066,65 @@
 
         // Lipinski highlighting functions
         function getMWClass(mw) {
-            const val = parseFloat(mw);
-            if (isNaN(val)) return '';
-            if (val > 500) return 'alert';
-            if (val > 450) return 'warning';
+            if (mw === null) return '';
+            if (mw > 500) return 'alert';
+            if (mw > 450) return 'warning';
             return '';
         }
 
         function getLogPClass(logp) {
-            const val = parseFloat(logp);
-            if (isNaN(val)) return '';
-            if (val > 5) return 'alert';
-            if (val > 4) return 'warning';
+            if (logp === null) return '';
+            if (logp > 5) return 'alert';
+            if (logp > 4) return 'warning';
             return '';
         }
 
         function getTPSAClass(tpsa) {
-            const val = parseFloat(tpsa);
-            if (isNaN(val)) return '';
-            if (val > 140) return 'alert';
-            if (val > 120) return 'warning';
+            if (tpsa === null) return '';
+            if (tpsa > 140) return 'alert';
+            if (tpsa > 120) return 'warning';
             return '';
         }
 
         function getHBAClass(hba) {
-            const val = parseInt(hba);
-            if (isNaN(val)) return '';
-            if (val > 10) return 'alert';
-            if (val > 8) return 'warning';
+            if (hba === null) return '';
+            if (hba > 10) return 'alert';
+            if (hba > 8) return 'warning';
             return '';
         }
 
         function getHBDClass(hbd) {
-            const val = parseInt(hbd);
-            if (isNaN(val)) return '';
-            if (val > 5) return 'alert';
-            if (val > 4) return 'warning';
+            if (hbd === null) return '';
+            if (hbd > 5) return 'alert';
+            if (hbd > 4) return 'warning';
             return '';
         }
 
         function getRotBClass(rotb) {
-            const val = parseInt(rotb);
-            if (isNaN(val)) return '';
-            if (val > 10) return 'alert';
-            if (val > 7) return 'warning';
+            if (rotb === null) return '';
+            if (rotb > 10) return 'alert';
+            if (rotb > 7) return 'warning';
             return '';
         }
+
+        // View toggle handlers
+        document.getElementById('view-cards').addEventListener('click', () => {
+            currentView = 'cards';
+            document.getElementById('view-cards').classList.add('active');
+            document.getElementById('view-radar').classList.remove('active');
+            document.getElementById('molecules-list').classList.remove('hidden');
+            document.getElementById('radar-container').classList.remove('active');
+            renderView();
+        });
+
+        document.getElementById('view-radar').addEventListener('click', () => {
+            currentView = 'radar';
+            document.getElementById('view-radar').classList.add('active');
+            document.getElementById('view-cards').classList.remove('active');
+            document.getElementById('molecules-list').classList.add('hidden');
+            document.getElementById('radar-container').classList.add('active');
+            renderView();
+        });
 
         // Panel toggle - button is outside panel so it's always accessible
         document.getElementById('panel-toggle').addEventListener('click', () => {
