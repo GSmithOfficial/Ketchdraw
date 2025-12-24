@@ -33,10 +33,44 @@
             background: var(--bg-primary);
         }
 
-        .container {
+        .app-header {
+            height: 48px;
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            border-bottom: 1px solid var(--border);
             display: flex;
-            height: 100vh;
+            align-items: center;
+            padding: 0 20px;
+            gap: 12px;
+        }
+
+        .app-logo {
+            font-size: 24px;
+        }
+
+        .app-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .app-title span {
+            color: var(--accent);
+        }
+
+        .app-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 12px;
+            padding-left: 12px;
+            border-left: 1px solid var(--border);
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 48px);
             width: 100vw;
+            position: relative;
         }
 
         #ketcher-container {
@@ -51,28 +85,10 @@
             border: none;
         }
 
-        .properties-panel {
-            width: 280px;
-            min-width: 280px;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            display: flex;
-            flex-direction: column;
-            transition: width 0.3s ease, min-width 0.3s ease;
-            border-left: 1px solid var(--bg-tertiary);
-            position: relative;
-        }
-
-        .properties-panel.collapsed {
-            width: 0;
-            min-width: 0;
-            overflow: hidden;
-            border-left: none;
-        }
-
+        /* Toggle button - positioned outside the panel */
         .panel-toggle {
             position: absolute;
-            left: -28px;
+            right: 280px;
             top: 50%;
             transform: translateY(-50%);
             width: 28px;
@@ -87,11 +103,31 @@
             justify-content: center;
             font-size: 14px;
             z-index: 100;
-            transition: background 0.2s;
+            transition: right 0.3s ease, background 0.2s;
         }
 
         .panel-toggle:hover {
             background: var(--border);
+        }
+
+        .panel-toggle.collapsed {
+            right: 0;
+        }
+
+        .properties-panel {
+            width: 280px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s ease, margin-right 0.3s ease;
+            border-left: 1px solid var(--bg-tertiary);
+        }
+
+        .properties-panel.collapsed {
+            width: 0;
+            overflow: hidden;
+            border-left: none;
         }
 
         .panel-header {
@@ -103,11 +139,13 @@
             align-items: center;
             gap: 8px;
             border-bottom: 1px solid var(--border);
+            white-space: nowrap;
         }
 
         .panel-header svg {
             width: 18px;
             height: 18px;
+            flex-shrink: 0;
         }
 
         .molecules-list {
@@ -251,6 +289,7 @@
             border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
+            white-space: nowrap;
         }
 
         .status-indicator {
@@ -327,16 +366,22 @@
         <div class="loading-subtext" id="loading-status">Initializing RDKit...</div>
     </div>
 
-    <div class="container">
+    <header class="app-header">
+        <span class="app-logo">⚗️</span>
+        <h1 class="app-title">Ketch<span>Draw</span></h1>
+        <span class="app-subtitle">Molecular Structure Editor</span>
+    </header>
+
+    <div class="main-container">
         <div id="ketcher-container">
             <iframe id="ketcher-frame" src="ketcher/index.html"></iframe>
         </div>
 
-        <div class="properties-panel" id="properties-panel">
-            <button class="panel-toggle" id="panel-toggle" title="Toggle Properties Panel">
-                <span>◀</span>
-            </button>
+        <button class="panel-toggle" id="panel-toggle" title="Toggle Properties Panel">
+            <span>◀</span>
+        </button>
 
+        <div class="properties-panel" id="properties-panel">
             <div class="panel-header">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0-6v6"/>
@@ -372,8 +417,11 @@
         let RDKit = null;
         let ketcherInstance = null;
         let lastSmiles = '';
+        let lastStableSmiles = '';
         let isRDKitReady = false;
         let isKetcherReady = false;
+        let debounceTimer = null;
+        let stableCount = 0;
 
         // RDKit CDN base URL
         const RDKIT_CDN_BASE = 'https://unpkg.com/@rdkit/rdkit/dist/';
@@ -469,21 +517,36 @@
             document.getElementById('status-dot').classList.toggle('ready', ready);
         }
 
-        // Poll for molecule changes
+        // Poll for molecule changes with debouncing to avoid hover previews
         function startPolling() {
             setInterval(async () => {
                 if (!ketcherInstance) return;
 
                 try {
                     const smiles = await ketcherInstance.getSmiles();
+
+                    // If SMILES changed, start debounce timer
                     if (smiles !== lastSmiles) {
                         lastSmiles = smiles;
-                        calculateProperties(smiles);
+                        stableCount = 0;
+
+                        // Clear existing timer
+                        if (debounceTimer) {
+                            clearTimeout(debounceTimer);
+                        }
+
+                        // Wait for SMILES to be stable for 300ms before updating
+                        debounceTimer = setTimeout(() => {
+                            if (lastSmiles === smiles && smiles !== lastStableSmiles) {
+                                lastStableSmiles = smiles;
+                                calculateProperties(smiles);
+                            }
+                        }, 300);
                     }
                 } catch (e) {
                     // Silently handle errors during polling
                 }
-            }, 500);
+            }, 100);
         }
 
         // Calculate molecular properties
@@ -716,12 +779,13 @@
             return '';
         }
 
-        // Panel toggle
+        // Panel toggle - button is outside panel so it's always accessible
         document.getElementById('panel-toggle').addEventListener('click', () => {
             const panel = document.getElementById('properties-panel');
             const toggle = document.getElementById('panel-toggle');
-            panel.classList.toggle('collapsed');
-            toggle.querySelector('span').textContent = panel.classList.contains('collapsed') ? '▶' : '◀';
+            const isCollapsed = panel.classList.toggle('collapsed');
+            toggle.classList.toggle('collapsed', isCollapsed);
+            toggle.querySelector('span').textContent = isCollapsed ? '▶' : '◀';
         });
 
         // Initialize
