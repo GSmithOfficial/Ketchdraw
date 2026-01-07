@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ketcher</title>
-    <link rel="stylesheet" href="https://unpkg.com/ketcher-react@3.7.0/dist/index.css">
+    <link rel="stylesheet" href="static/css/ketcher.css">
     <style>
         * {
             margin: 0;
@@ -46,21 +46,23 @@
         </div>
     </div>
 
-    <!-- React -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- React (loaded first) -->
+    <script src="static/js/react.production.min.js"></script>
+    <script src="static/js/react-dom.production.min.js"></script>
 
-    <!-- Ketcher -->
-    <script src="https://unpkg.com/ketcher-standalone@3.7.0/dist/main.js"></script>
-    <script src="https://unpkg.com/ketcher-react@3.7.0/dist/index.js"></script>
+    <!-- Ketcher Standalone (structure services) -->
+    <script src="static/js/ketcher-standalone.js"></script>
+
+    <!-- Ketcher React (UI) -->
+    <script src="static/js/ketcher-react.js"></script>
 
     <script>
-        // Wait for all scripts to load
-        window.addEventListener('load', function() {
+        // Initialize Ketcher
+        (function() {
             const { Editor } = KetcherReact;
             const { StandaloneStructServiceProvider } = KetcherStandalone;
 
-            // Create struct service provider
+            // Create struct service provider with local WASM path
             const structServiceProvider = new StandaloneStructServiceProvider();
 
             // Render Ketcher
@@ -68,7 +70,7 @@
 
             root.render(
                 React.createElement(Editor, {
-                    staticResourcesUrl: '',
+                    staticResourcesUrl: 'static/js/',
                     structServiceProvider: structServiceProvider,
                     onInit: function(ketcher) {
                         // Expose ketcher globally for parent frame access
@@ -82,7 +84,7 @@
                     }
                 })
             );
-        });
+        })();
     </script>
 </body>
 </html>
