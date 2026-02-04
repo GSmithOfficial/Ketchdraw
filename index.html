@@ -524,36 +524,6 @@
             height: auto;
         }
 
-        #radar-chart {
-            max-height: 400px;
-        }
-
-        .radar-legend {
-            margin-top: 16px;
-            padding: 12px;
-            background: var(--bg-card);
-            border-radius: 8px;
-            font-size: 11px;
-        }
-
-        .radar-legend-title {
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-        }
-
-        .radar-legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 4px;
-        }
-
-        .radar-legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 2px;
-        }
     </style>
 </head>
 <body>
@@ -588,7 +558,7 @@
                 </div>
                 <div class="view-toggle">
                     <button id="view-cards" class="active" title="Card View">Cards</button>
-                    <button id="view-radar" title="pKa Analaysis">pKa</button>
+                    <button id="view-pka" title="pKa Analaysis">pKa</button>
                 </div>
             </div>
 
@@ -639,36 +609,12 @@
         let isRDKitReady = false;
         let isKetcherReady = false;
         let currentMolecules = [];
-        let radarChart = null;
         let currentView = 'cards'; // 'cards' or 'radar'
         let pendingUpdate = false;
         let userHasInteracted = false;
 
         // RDKit CDN base URL
         const RDKIT_CDN_BASE = 'https://unpkg.com/@rdkit/rdkit/dist/';
-
-        // Radar chart ranges (with min and max)
-        const RADAR_RANGES = {
-            mw: { min: 0, max: 600, label: 'MW' },
-            clogp: { min: -1, max: 6, label: 'cLogP' },
-            tpsa: { min: 0, max: 140, label: 'TPSA' },
-            fsp3: { min: 0, max: 1, label: 'Fsp3' },
-            hba: { min: 0, max: 10, label: 'HBA' },
-            hbd: { min: 0, max: 5, label: 'HBD' },
-            rotBonds: { min: 0, max: 10, label: 'RotB' },
-            arRings: { min: 0, max: 5, label: 'ArRings' },
-            stereo: { min: 0, max: 4, label: 'Stereo' },
-            unspecified: { min: 0, max: 4, label: 'Unspec' }
-        };
-
-        // Colors for multiple molecules in radar
-        const MOLECULE_COLORS = [
-            { bg: 'rgba(233, 69, 96, 0.3)', border: 'rgba(233, 69, 96, 1)' },
-            { bg: 'rgba(78, 204, 163, 0.3)', border: 'rgba(78, 204, 163, 1)' },
-            { bg: 'rgba(255, 193, 7, 0.3)', border: 'rgba(255, 193, 7, 1)' },
-            { bg: 'rgba(100, 149, 237, 0.3)', border: 'rgba(100, 149, 237, 1)' },
-            { bg: 'rgba(186, 85, 211, 0.3)', border: 'rgba(186, 85, 211, 1)' }
-        ];
 
         // Load RDKit dynamically
         async function loadRDKitScript() {
@@ -907,8 +853,6 @@
         function renderView() {
             if (currentView === 'cards') {
                 renderMolecules();
-            } else {
-                renderRadar();
             }
 
             document.getElementById('molecule-count').textContent =
@@ -1021,19 +965,6 @@
                 </div>
             `}).join('');
         }
-
-        function renderRadar() {
-            const container = document.getElementById('radar-container');
-            const legend = document.getElementById('radar-legend');
-
-            if (currentMolecules.length === 0 || currentMolecules.every(m => m.error)) {
-                if (radarChart) {
-                    radarChart.destroy();
-                    radarChart = null;
-                }
-                legend.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Draw molecules to see radar comparison</p>';
-                return;
-            }
 
             // Get valid molecules
             const validMols = currentMolecules.filter(m => !m.error);
@@ -1155,31 +1086,6 @@
                     `;
                 }).join('')}
             `;
-        }
-
-        function calculateDynamicRanges(molecules) {
-            const ranges = {};
-
-            for (const key of Object.keys(RADAR_RANGES)) {
-                const baseRange = RADAR_RANGES[key];
-                let max = baseRange.max;
-
-                // Check if any molecule exceeds the max
-                for (const mol of molecules) {
-                    const val = mol[key];
-                    if (val !== null && val !== undefined && val > max) {
-                        // Expand by 10%
-                        max = val * 1.1;
-                    }
-                }
-
-                ranges[key] = {
-                    min: baseRange.min,
-                    max: Math.round(max * 100) / 100 // Round to 2 decimals
-                };
-            }
-
-            return ranges;
         }
 
         function escapeHtml(text) {
