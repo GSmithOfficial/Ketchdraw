@@ -189,14 +189,131 @@
             padding: 8px;
         }
 
-        .radar-container {
-            flex: 1;
-            padding: 16px;
-            display: none;
-        }
+        .pka-container {
+    flex: 1;
+    padding: 16px;
+    display: none;
+    overflow-y: auto;
+}
 
-        .radar-container.active {
-            display: block;
+.pka-container.active {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.pka-input-section {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.pka-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.smiles-display {
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    padding: 10px;
+    border-radius: 4px;
+    word-break: break-all;
+    margin-bottom: 12px;
+    min-height: 40px;
+}
+
+.pka-calculate-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+}
+
+.pka-calculate-btn:hover:not(:disabled) {
+    background: #d63850;
+}
+
+.pka-calculate-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pka-results {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 12px;
+    display: none;
+}
+
+.pka-results.active {
+    display: block;
+}
+
+.pka-results-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.pka-result-item {
+    background: var(--bg-tertiary);
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.pka-result-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.pka-result-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--success);
+}
+
+.pka-chart-container {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 12px;
+    display: none;
+}
+
+.pka-chart-container.active {
+    display: block;
+}
+
+.pka-loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+}
+
+.pka-error {
+    background: rgba(233, 69, 96, 0.1);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 12px;
+    color: var(--accent);
+    font-size: 13px;
+}
         }
 
         .molecules-list.hidden {
@@ -471,7 +588,7 @@
                 </div>
                 <div class="view-toggle">
                     <button id="view-cards" class="active" title="Card View">Cards</button>
-                    <button id="view-radar" title="Radar Plot">Radar</button>
+                    <button id="view-radar" title="pKa Analaysis">pKa</button>
                 </div>
             </div>
 
@@ -489,10 +606,21 @@
                 </div>
             </div>
 
-            <div class="radar-container" id="radar-container">
-                <canvas id="radar-chart"></canvas>
-                <div class="radar-legend" id="radar-legend"></div>
-            </div>
+            <div class="pka-container" id="pka-container">
+    <div class="pka-input-section">
+        <label class="pka-label">Selected Molecule</label>
+        <div class="smiles-display" id="pka-smiles">Draw a molecule in Ketcher</div>
+        <button class="pka-calculate-btn" id="calculate-pka-btn" disabled>
+            Calculate pKa
+        </button>
+    </div>
+    <div class="pka-results" id="pka-results">
+        <!-- Results will appear here -->
+    </div>
+    <div class="pka-chart-container" id="pka-chart-container">
+        <canvas id="pka-chart"></canvas>
+    </div>
+</div>
 
             <div class="status-bar">
                 <div class="status-indicator">
@@ -1109,22 +1237,25 @@
 
         // View toggle handlers
         document.getElementById('view-cards').addEventListener('click', () => {
-            currentView = 'cards';
-            document.getElementById('view-cards').classList.add('active');
-            document.getElementById('view-radar').classList.remove('active');
-            document.getElementById('molecules-list').classList.remove('hidden');
-            document.getElementById('radar-container').classList.remove('active');
-            renderView();
-        });
+    currentView = 'cards';
+    document.getElementById('view-cards').classList.add('active');
+    document.getElementById('view-pka').classList.remove('active');
+    document.getElementById('molecules-list').classList.remove('hidden');
+    document.getElementById('pka-container').classList.remove('active');
+    renderView();
+});
 
-        document.getElementById('view-radar').addEventListener('click', () => {
-            currentView = 'radar';
-            document.getElementById('view-radar').classList.add('active');
-            document.getElementById('view-cards').classList.remove('active');
-            document.getElementById('molecules-list').classList.add('hidden');
-            document.getElementById('radar-container').classList.add('active');
-            renderView();
-        });
+document.getElementById('view-pka').addEventListener('click', () => {
+    currentView = 'pka';
+    document.getElementById('view-pka').classList.add('active');
+    document.getElementById('view-cards').classList.remove('active');
+    document.getElementById('molecules-list').classList.add('hidden');
+    document.getElementById('pka-container').classList.add('active');
+    updatePkaSmiles();
+});
+
+// pKa Calculate button handler
+document.getElementById('calculate-pka-btn').addEventListener('click', calculatePka);
 
         // Panel toggle - button is outside panel so it's always accessible
         document.getElementById('panel-toggle').addEventListener('click', () => {
@@ -1134,6 +1265,168 @@
             toggle.classList.toggle('collapsed', isCollapsed);
             toggle.querySelector('span').textContent = isCollapsed ? '▶' : '◀';
         });
+        // pKa API endpoint
+const PKA_API_URL = 'https://web-production-0ede.up.railway.app/pka';
+let pkaChart = null;
+
+// Update SMILES display in pKa tab
+function updatePkaSmiles() {
+    const smilesDisplay = document.getElementById('pka-smiles');
+    const calculateBtn = document.getElementById('calculate-pka-btn');
+    
+    if (currentMolecules.length > 0 && currentMolecules[0].smiles) {
+        smilesDisplay.textContent = currentMolecules[0].smiles;
+        calculateBtn.disabled = false;
+    } else {
+        smilesDisplay.textContent = 'Draw a molecule in Ketcher';
+        calculateBtn.disabled = true;
+    }
+}
+
+// Call pKa API
+async function calculatePka() {
+    const smiles = currentMolecules[0]?.smiles;
+    if (!smiles) return;
+    
+    const resultsDiv = document.getElementById('pka-results');
+    const chartContainer = document.getElementById('pka-chart-container');
+    const calculateBtn = document.getElementById('calculate-pka-btn');
+    
+    // Show loading state
+    calculateBtn.disabled = true;
+    calculateBtn.textContent = 'Calculating...';
+    resultsDiv.innerHTML = '<div class="pka-loading">⏳ Calculating pKa properties...</div>';
+    resultsDiv.classList.add('active');
+    chartContainer.classList.remove('active');
+    
+    try {
+        const response = await fetch(PKA_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ smiles: smiles, pH: 7.4 })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            displayPkaResults(data);
+        } else {
+            resultsDiv.innerHTML = `<div class="pka-error">❌ Error: ${data.error || 'Unknown error'}</div>`;
+        }
+    } catch (error) {
+        resultsDiv.innerHTML = `<div class="pka-error">❌ Network error: ${error.message}</div>`;
+    } finally {
+        calculateBtn.disabled = false;
+        calculateBtn.textContent = 'Calculate pKa';
+    }
+}
+
+// Display pKa results
+function displayPkaResults(data) {
+    const resultsDiv = document.getElementById('pka-results');
+    const chartContainer = document.getElementById('pka-chart-container');
+    
+    const acidicPka = data.pka?.acidic !== null ? data.pka.acidic.toFixed(2) : 'N/A';
+    const basicPka = data.pka?.basic !== null ? data.pka.basic.toFixed(2) : 'N/A';
+    const logD = data.logd !== null ? data.logd.toFixed(2) : 'N/A';
+    const dominant = data.dominant_microstate || 'N/A';
+    
+    resultsDiv.innerHTML = `
+        <div class="pka-results-grid">
+            <div class="pka-result-item">
+                <div class="pka-result-label">Acidic pKa</div>
+                <div class="pka-result-value">${acidicPka}</div>
+            </div>
+            <div class="pka-result-item">
+                <div class="pka-result-label">Basic pKa</div>
+                <div class="pka-result-value">${basicPka}</div>
+            </div>
+            <div class="pka-result-item">
+                <div class="pka-result-label">LogD (pH 7.4)</div>
+                <div class="pka-result-value">${logD}</div>
+            </div>
+            <div class="pka-result-item">
+                <div class="pka-result-label">Microstates</div>
+                <div class="pka-result-value">${data.microstates?.length || 0}</div>
+            </div>
+        </div>
+        <div class="pka-label" style="margin-top: 8px;">Dominant at pH 7.4</div>
+        <div class="smiles-display" style="font-size: 10px;">${dominant}</div>
+    `;
+    resultsDiv.classList.add('active');
+    
+    // Draw distribution chart if data available
+    if (data.distribution_curve && data.distribution_curve.microstates.length > 0) {
+        drawPkaChart(data.distribution_curve);
+        chartContainer.classList.add('active');
+    }
+}
+
+// Draw pKa distribution chart
+function drawPkaChart(curveData) {
+    const ctx = document.getElementById('pka-chart').getContext('2d');
+    
+    // Destroy existing chart
+    if (pkaChart) {
+        pkaChart.destroy();
+    }
+    
+    // Colors for different microstates
+    const colors = [
+        'rgba(78, 204, 163, 1)',   // green
+        'rgba(233, 69, 96, 1)',    // red
+        'rgba(255, 193, 7, 1)',    // yellow
+        'rgba(100, 149, 237, 1)',  // blue
+        'rgba(186, 85, 211, 1)'    // purple
+    ];
+    
+    // Prepare datasets
+    const datasets = curveData.microstates.map((ms, index) => ({
+        label: `Charge ${ms.charge >= 0 ? '+' : ''}${ms.charge}`,
+        data: ms.populations.map((pop, i) => ({ x: curveData.ph_values[i], y: pop })),
+        borderColor: colors[index % colors.length],
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.4
+    }));
+    
+    pkaChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: { display: true, text: 'pH', color: '#e0e0e0' },
+                    min: 0,
+                    max: 14,
+                    ticks: { color: '#888' },
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                },
+                y: {
+                    title: { display: true, text: 'Population', color: '#e0e0e0' },
+                    min: 0,
+                    max: 1,
+                    ticks: { color: '#888' },
+                    grid: { color: 'rgba(255,255,255,0.1)' }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#e0e0e0', boxWidth: 12 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${(ctx.parsed.y * 100).toFixed(1)}%`
+                    }
+                }
+            }
+        }
+    });
+}
 
         // Initialize
         initRDKit();
