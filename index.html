@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KetchDraw - Molecular Structure Editor</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚗️</text></svg>">
-    <!-- Chart.js for radar plots -->
+    <title>BoltzDraw - Molecular Structure Editor</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>">
+    <!-- Chart.js for distribution plots -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
@@ -14,17 +14,31 @@
             box-sizing: border-box;
         }
 
+        /* -------------------------------------------------------
+           BoltzDraw Design Tokens
+           Taken directly from Boltzlab visual branding config:
+             Primary  #35583d  (forest green)
+             Light    #67826b  (sage green)
+             Dark     #35583d
+             Light bg #fafafa
+             Dark bg  #1f1f1f
+        ------------------------------------------------------- */
         :root {
-            --bg-primary: #1a1a2e;
-            --bg-secondary: #16213e;
-            --bg-tertiary: #0f3460;
-            --bg-card: #1a2744;
-            --accent: #e94560;
-            --success: #4ecca3;
-            --warning: #ffc107;
-            --text-primary: #e0e0e0;
-            --text-secondary: #888;
-            --border: #1a4a7a;
+            --bg-primary:    #fafafa;
+            --bg-secondary:  #ffffff;
+            --bg-tertiary:   #f0f4f1;   /* soft green-tinted surface */
+            --bg-card:       #ffffff;
+            --accent:        #35583d;   /* primary forest green */
+            --accent-light:  #67826b;   /* sage green for hover/secondary */
+            --accent-subtle: #eef3ef;   /* very light green tint for selected states */
+            --success:       #35583d;
+            --warning:       #b45309;   /* amber - used for Lipinski alerts */
+            --alert:         #c0392b;   /* red for hard violations */
+            --text-primary:  #1f1f1f;
+            --text-secondary: #6b7280;
+            --text-muted:    #9ca3af;
+            --border:        #d1d9d3;   /* green-tinted border */
+            --border-strong: #35583d;
         }
 
         body {
@@ -33,11 +47,13 @@
             height: 100vh;
             width: 100vw;
             background: var(--bg-primary);
+            color: var(--text-primary);
         }
 
+        /* ---- Header ---- */
         .app-header {
-            height: 48px;
-            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            height: 52px;
+            background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
@@ -46,14 +62,16 @@
         }
 
         .app-logo {
-            font-size: 24px;
+            font-size: 22px;
+            line-height: 1;
         }
 
+        /* "Boltz" in accent green, "Draw" in near-black */
         .app-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
             color: var(--text-primary);
-            letter-spacing: -0.5px;
+            letter-spacing: -0.3px;
         }
 
         .app-title span {
@@ -68,9 +86,10 @@
             border-left: 1px solid var(--border);
         }
 
+        /* ---- Layout ---- */
         .main-container {
             display: flex;
-            height: calc(100vh - 48px);
+            height: calc(100vh - 52px);
             width: 100vw;
             position: relative;
         }
@@ -87,43 +106,45 @@
             border: none;
         }
 
-        /* Toggle button - positioned outside the panel */
+        /* ---- Panel toggle button ---- */
         .panel-toggle {
             position: absolute;
             right: 320px;
             top: 50%;
             transform: translateY(-50%);
-            width: 28px;
-            height: 56px;
-            background: var(--bg-tertiary);
-            border: none;
+            width: 24px;
+            height: 48px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-right: none;
             border-radius: 6px 0 0 6px;
             color: var(--accent);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 12px;
             z-index: 100;
             transition: right 0.3s ease, background 0.2s;
         }
 
         .panel-toggle:hover {
-            background: var(--border);
+            background: var(--accent-subtle);
         }
 
         .panel-toggle.collapsed {
             right: 0;
         }
 
+        /* ---- Properties panel ---- */
         .properties-panel {
             width: 320px;
             background: var(--bg-secondary);
             color: var(--text-primary);
             display: flex;
             flex-direction: column;
-            transition: width 0.3s ease, margin-right 0.3s ease;
-            border-left: 1px solid var(--bg-tertiary);
+            transition: width 0.3s ease;
+            border-left: 1px solid var(--border);
         }
 
         .properties-panel.collapsed {
@@ -134,9 +155,9 @@
 
         .panel-header {
             padding: 12px 16px;
-            background: var(--bg-tertiary);
+            background: var(--bg-secondary);
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -148,82 +169,229 @@
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-
-        .panel-header svg {
-            width: 18px;
-            height: 18px;
-            flex-shrink: 0;
-        }
-
-        .view-toggle {
-            display: flex;
-            gap: 4px;
-        }
-
-        .view-toggle button {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
-        }
-
-        .view-toggle button:hover {
-            background: var(--bg-card);
             color: var(--text-primary);
         }
 
-        .view-toggle button.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: white;
+        .panel-header svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            color: var(--accent);
         }
 
+        /* ---- View toggle (Cards / pKa) ---- */
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            padding: 3px;
+        }
+
+        .view-toggle button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+
+        .view-toggle button:hover {
+            color: var(--accent);
+        }
+
+        .view-toggle button.active {
+            background: var(--bg-secondary);
+            color: var(--accent);
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        /* ---- Molecules list ---- */
         .molecules-list {
             flex: 1;
             overflow-y: auto;
-            padding: 8px;
+            padding: 10px;
+            background: var(--bg-primary);
         }
 
+        .molecules-list.hidden {
+            display: none;
+        }
+
+        /* ---- Molecule card ---- */
+        .molecule-card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: box-shadow 0.15s;
+        }
+
+        .molecule-card:hover {
+            box-shadow: 0 2px 8px rgba(53, 88, 61, 0.1);
+        }
+
+        .molecule-header {
+            padding: 8px 12px;
+            background: var(--accent-subtle);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--accent);
+            gap: 8px;
+        }
+
+        .molecule-smiles {
+            font-size: 10px;
+            color: var(--text-secondary);
+            font-family: 'SF Mono', 'Fira Mono', monospace;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ---- Properties grid ---- */
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--border);
+            padding: 1px;
+        }
+
+        .property-cell {
+            background: var(--bg-card);
+            padding: 7px 8px;
+            text-align: center;
+        }
+
+        .property-label {
+            font-size: 9px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 3px;
+            letter-spacing: 0.4px;
+            font-weight: 500;
+        }
+
+        .property-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        /* Lipinski colour coding - using Boltzlab warning/alert tokens */
+        .property-value.warning {
+            color: var(--warning);
+        }
+
+        .property-value.alert {
+            color: var(--alert);
+        }
+
+        /* ---- Empty state ---- */
+        .no-molecules {
+            text-align: center;
+            padding: 48px 20px;
+            color: var(--text-muted);
+        }
+
+        .no-molecules svg {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 14px;
+            opacity: 0.35;
+            color: var(--accent-light);
+        }
+
+        .no-molecules p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* ---- Structure preview ---- */
+        .structure-preview {
+            padding: 10px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+        }
+
+        .structure-preview svg {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* ---- Copy button ---- */
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px 6px;
+            font-size: 11px;
+            opacity: 0.8;
+            transition: opacity 0.2s, color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+            color: var(--accent);
+        }
+
+        /* ---- pKa panel ---- */
         .pka-container {
             flex: 1;
-            padding: 16px;
+            padding: 14px;
             display: none;
             overflow-y: auto;
+            background: var(--bg-primary);
         }
 
         .pka-container.active {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
         }
 
         .pka-input-section {
             background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px;
         }
 
         .pka-label {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 8px;
             display: block;
+            font-weight: 600;
         }
 
         .smiles-display {
-            font-family: monospace;
-            font-size: 12px;
+            font-family: 'SF Mono', 'Fira Mono', monospace;
+            font-size: 11px;
             color: var(--text-primary);
             background: var(--bg-tertiary);
+            border: 1px solid var(--border);
             padding: 10px;
-            border-radius: 4px;
+            border-radius: 6px;
             word-break: break-all;
             margin-bottom: 12px;
             min-height: 40px;
@@ -231,28 +399,30 @@
 
         .pka-calculate-btn {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             background: var(--accent);
-            color: white;
+            color: #ffffff;
             border: none;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s, opacity 0.2s;
+            letter-spacing: 0.1px;
         }
 
         .pka-calculate-btn:hover:not(:disabled) {
-            background: #d63850;
+            background: #2a4731;
         }
 
         .pka-calculate-btn:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
         .pka-results {
             background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px;
             display: none;
@@ -271,6 +441,7 @@
 
         .pka-result-item {
             background: var(--bg-tertiary);
+            border: 1px solid var(--border);
             padding: 10px;
             border-radius: 6px;
             text-align: center;
@@ -280,17 +451,20 @@
             font-size: 10px;
             color: var(--text-secondary);
             text-transform: uppercase;
+            letter-spacing: 0.4px;
             margin-bottom: 4px;
+            font-weight: 500;
         }
 
         .pka-result-value {
             font-size: 18px;
             font-weight: 700;
-            color: var(--success);
+            color: var(--accent);
         }
 
         .pka-chart-container {
             background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px;
             display: none;
@@ -304,112 +478,56 @@
             text-align: center;
             padding: 20px;
             color: var(--text-secondary);
+            font-size: 13px;
         }
 
         .pka-error {
-            background: rgba(233, 69, 96, 0.1);
-            border: 1px solid var(--accent);
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
             border-radius: 6px;
             padding: 12px;
-            color: var(--accent);
-            font-size: 13px;
-        }
-
-        .molecules-list.hidden {
-            display: none;
-        }
-
-        .molecule-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            overflow: hidden;
-            border: 1px solid var(--bg-tertiary);
-        }
-
-        .molecule-header {
-            padding: 8px 12px;
-            background: var(--bg-tertiary);
+            color: var(--alert);
             font-size: 12px;
-            font-weight: 600;
+        }
+
+        /* ---- Status bar ---- */
+        .status-bar {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            font-size: 11px;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            color: var(--accent);
-            gap: 8px;
-        }
-
-        .molecule-smiles {
-            font-size: 10px;
-            color: var(--text-secondary);
-            font-family: monospace;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
             white-space: nowrap;
         }
 
-        .properties-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1px;
-            background: var(--bg-tertiary);
-            padding: 1px;
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .property-cell {
-            background: var(--bg-card);
-            padding: 6px 8px;
-            text-align: center;
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--text-muted);
         }
 
-        .property-label {
-            font-size: 9px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            margin-bottom: 2px;
-            letter-spacing: 0.3px;
+        .status-dot.ready {
+            background: var(--accent);
         }
 
-        .property-value {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--success);
-        }
-
-        .property-value.warning {
-            color: var(--warning);
-        }
-
-        .property-value.alert {
-            color: var(--accent);
-        }
-
-        .no-molecules {
-            text-align: center;
-            padding: 40px 20px;
-            color: #555;
-        }
-
-        .no-molecules svg {
-            width: 48px;
-            height: 48px;
-            margin-bottom: 12px;
-            opacity: 0.4;
-        }
-
-        .no-molecules p {
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
+        /* ---- Loading overlay ---- */
         .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(26, 26, 46, 0.97);
+            background: rgba(250, 250, 250, 0.97);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -422,12 +540,12 @@
         }
 
         .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid var(--bg-tertiary);
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
             border-top-color: var(--accent);
             border-radius: 50%;
-            animation: spin 1s linear infinite;
+            animation: spin 0.9s linear infinite;
         }
 
         @keyframes spin {
@@ -438,116 +556,70 @@
             margin-top: 16px;
             color: var(--text-primary);
             font-size: 14px;
+            font-weight: 500;
         }
 
         .loading-subtext {
-            margin-top: 8px;
+            margin-top: 6px;
             color: var(--text-secondary);
             font-size: 12px;
         }
 
-        .status-bar {
-            padding: 8px 16px;
-            background: var(--bg-tertiary);
-            font-size: 11px;
-            color: var(--text-secondary);
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            white-space: nowrap;
+        /* ---- Custom scrollbar ---- */
+        .molecules-list::-webkit-scrollbar,
+        .pka-container::-webkit-scrollbar {
+            width: 5px;
         }
 
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .molecules-list::-webkit-scrollbar-track,
+        .pka-container::-webkit-scrollbar-track {
+            background: transparent;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--accent);
-        }
-
-        .status-dot.ready {
-            background: var(--success);
-        }
-
-        /* Custom scrollbar */
-        .molecules-list::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .molecules-list::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        .molecules-list::-webkit-scrollbar-thumb {
-            background: var(--bg-tertiary);
+        .molecules-list::-webkit-scrollbar-thumb,
+        .pka-container::-webkit-scrollbar-thumb {
+            background: var(--border);
             border-radius: 3px;
         }
 
-        .molecules-list::-webkit-scrollbar-thumb:hover {
-            background: var(--border);
-        }
-
-        .copy-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 2px 6px;
-            font-size: 12px;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-            flex-shrink: 0;
-        }
-
-        .copy-btn:hover {
-            opacity: 1;
-            color: var(--success);
-        }
-
-        .structure-preview {
-            padding: 8px;
-            background: white;
-            border-radius: 4px;
-            margin: 8px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .structure-preview svg {
-            max-width: 100%;
-            height: auto;
+        .molecules-list::-webkit-scrollbar-thumb:hover,
+        .pka-container::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-light);
         }
 
     </style>
 </head>
 <body>
+
+    <!-- Loading overlay -->
     <div class="loading-overlay" id="loading">
         <div class="loading-spinner"></div>
-        <div class="loading-text">Loading KetchDraw...</div>
+        <div class="loading-text">Loading BoltzDraw...</div>
         <div class="loading-subtext" id="loading-status">Initializing RDKit...</div>
     </div>
 
+    <!-- Header - matches Boltzlab minimal header style -->
     <header class="app-header">
-        <span class="app-logo">⚗️</span>
-        <h1 class="app-title">Ketch<span>Draw</span></h1>
+        <span class="app-logo">🧬</span>
+        <h1 class="app-title"><span>Boltz</span>Draw</h1>
         <span class="app-subtitle">Molecular Structure Editor</span>
     </header>
 
     <div class="main-container">
+
+        <!-- Ketcher iframe -->
         <div id="ketcher-container">
             <iframe id="ketcher-frame" src="ketcher/index.html"></iframe>
         </div>
 
+        <!-- Panel collapse toggle -->
         <button class="panel-toggle" id="panel-toggle" title="Toggle Properties Panel">
             <span>◀</span>
         </button>
 
+        <!-- Properties panel -->
         <div class="properties-panel" id="properties-panel">
+
             <div class="panel-header">
                 <div class="panel-header-left">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -556,11 +628,12 @@
                     Properties
                 </div>
                 <div class="view-toggle">
-                    <button id="view-cards" class="active" title="Card View">Cards</button>
-                    <button id="view-pka" title="pKa Analysis">pKa</button>
+                    <button id="view-cards" class="active">Cards</button>
+                    <button id="view-pka">pKa</button>
                 </div>
             </div>
 
+            <!-- Cards view -->
             <div class="molecules-list" id="molecules-list">
                 <div class="no-molecules">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -571,26 +644,26 @@
                         <circle cx="20" cy="16" r="2"/>
                         <path d="M6 8h3M15 8h3M6 16h3M15 16h3M12 9V6M12 18v-3"/>
                     </svg>
-                    <p>Draw a molecule in Ketcher to see its properties</p>
+                    <p>Draw a molecule to see its calculated properties</p>
                 </div>
             </div>
 
+            <!-- pKa view -->
             <div class="pka-container" id="pka-container">
                 <div class="pka-input-section">
                     <label class="pka-label">Selected Molecule</label>
-                    <div class="smiles-display" id="pka-smiles">Draw a molecule in Ketcher</div>
+                    <div class="smiles-display" id="pka-smiles">Draw a molecule in the editor</div>
                     <button class="pka-calculate-btn" id="calculate-pka-btn" disabled>
                         Calculate pKa
                     </button>
                 </div>
-                <div class="pka-results" id="pka-results">
-                    <!-- Results will appear here -->
-                </div>
+                <div class="pka-results" id="pka-results"></div>
                 <div class="pka-chart-container" id="pka-chart-container">
                     <canvas id="pka-chart"></canvas>
                 </div>
             </div>
 
+            <!-- Status bar -->
             <div class="status-bar">
                 <div class="status-indicator">
                     <div class="status-dot" id="status-dot"></div>
@@ -598,6 +671,7 @@
                 </div>
                 <span id="molecule-count">0 molecules</span>
             </div>
+
         </div>
     </div>
 
@@ -609,22 +683,19 @@
         let isKetcherReady = false;
         let currentMolecules = [];
         let currentView = 'cards';
-        let pendingUpdate = false;
         let userHasInteracted = false;
 
-        // --- BUG FIX: track whether the mouse is inside the Ketcher iframe ---
+        // --- Ghost-molecule fix ---
         // When a template tool (e.g. cyclopropane) is selected and the user
         // hovers over the canvas WITHOUT clicking, Ketcher renders a ghost/preview
-        // of that structure internally. getSmiles() returns that ghost as if it
-        // were a real placed molecule. By blocking all SMILES polling while the
-        // mouse is inside the iframe, we prevent ghost structures from ever
-        // appearing in the properties panel.
+        // of that structure. getSmiles() returns that ghost as if it were real.
+        // We block all SMILES polling while the mouse is inside the iframe so
+        // ghost structures never appear in the properties panel.
         let isHoveringKetcherFrame = false;
 
-        // RDKit CDN base URL
+        // RDKit CDN
         const RDKIT_CDN_BASE = 'https://unpkg.com/@rdkit/rdkit/dist/';
 
-        // Load RDKit dynamically
         async function loadRDKitScript() {
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
@@ -635,7 +706,6 @@
             });
         }
 
-        // Initialize RDKit
         async function initRDKit() {
             try {
                 document.getElementById('loading-status').textContent = 'Loading RDKit...';
@@ -649,9 +719,7 @@
                     attempts++;
                 }
 
-                if (!window.initRDKitModule) {
-                    throw new Error('RDKit module not found');
-                }
+                if (!window.initRDKitModule) throw new Error('RDKit module not found');
 
                 RDKit = await window.initRDKitModule({
                     locateFile: (file) => RDKIT_CDN_BASE + file
@@ -659,7 +727,7 @@
 
                 console.log('RDKit initialized:', RDKit.version());
                 isRDKitReady = true;
-                document.getElementById('loading-status').textContent = 'Loading Ketcher...';
+                document.getElementById('loading-status').textContent = 'Loading editor...';
                 checkReady();
             } catch (error) {
                 console.error('RDKit failed:', error);
@@ -668,11 +736,9 @@
             }
         }
 
-        // Initialize Ketcher
         function initKetcher() {
             const frame = document.getElementById('ketcher-frame');
 
-            // Listen for Ketcher init message
             window.addEventListener('message', (event) => {
                 if (event.data.eventType === 'init') {
                     console.log('Ketcher initialized via message');
@@ -683,7 +749,6 @@
                 }
             });
 
-            // Also try direct access after load
             frame.onload = () => {
                 setTimeout(() => {
                     try {
@@ -703,21 +768,17 @@
             };
         }
 
-        // Setup interaction detection - only update after actual user interaction
         function setupInteractionDetection() {
             const frame = document.getElementById('ketcher-frame');
 
-            // --- HOVER TRACKING (core ghost-molecule fix) ---
-            // While the mouse is inside the iframe, Ketcher may show a ghost
-            // preview for template tools. We set isHoveringKetcherFrame = true
-            // so the polling interval and triggerDelayedUpdate both stand down.
+            // While the mouse is inside the iframe Ketcher may show ghost previews
+            // for template tools. Set flag so polling is blocked during hover.
             frame.addEventListener('mouseenter', () => {
                 isHoveringKetcherFrame = true;
                 userHasInteracted = false;
             });
 
-            // When the mouse leaves, Ketcher clears any ghost preview.
-            // This is the safe moment to check whether something was actually placed.
+            // Mouse leaving = Ketcher clears any ghost. Safe to check for real placements.
             frame.addEventListener('mouseleave', () => {
                 isHoveringKetcherFrame = false;
                 if (userHasInteracted) {
@@ -725,7 +786,7 @@
                 }
             });
 
-            // mouseup inside the frame signals a potential structure placement
+            // mouseup inside the frame = potential structure placement
             document.addEventListener('mouseup', (e) => {
                 const frameRect = frame.getBoundingClientRect();
                 if (
@@ -737,7 +798,7 @@
                 }
             });
 
-            // Keyboard events - delete, undo, paste, etc.
+            // Keyboard: delete, undo, paste etc.
             document.addEventListener('keyup', (e) => {
                 if (['Delete', 'Backspace', 'Enter', 'v', 'V', 'z', 'Z'].includes(e.key)) {
                     userHasInteracted = true;
@@ -745,8 +806,7 @@
                 }
             });
 
-            // Periodic fallback - ONLY runs when mouse is outside the frame,
-            // so it never picks up hover-preview ghost structures.
+            // Periodic fallback - only runs while mouse is outside the frame
             setInterval(() => {
                 checkForCommittedChanges();
             }, 1000);
@@ -755,12 +815,9 @@
         let updateTimer = null;
 
         function triggerDelayedUpdate() {
-            // Don't schedule an update while hovering - the ghost is still live
+            // Don't schedule while still hovering - ghost may still be live
             if (isHoveringKetcherFrame) return;
-
             if (updateTimer) clearTimeout(updateTimer);
-
-            // Small delay to let Ketcher finalise the placed structure
             updateTimer = setTimeout(() => {
                 checkForCommittedChanges();
             }, 300);
@@ -769,21 +826,18 @@
         async function checkForCommittedChanges() {
             if (!ketcherInstance || !isRDKitReady) return;
 
-            // GHOST FIX: skip the poll entirely while hovering.
-            // getSmiles() returns ghost/preview molecules during hover,
-            // so any read here would cause false property cards.
+            // Block during hover: getSmiles() returns ghost structures while
+            // the user hovers with a template tool selected
             if (isHoveringKetcherFrame) return;
 
             try {
                 const smiles = await ketcherInstance.getSmiles();
-
-                // Only update if SMILES actually changed from last committed state
                 if (smiles !== lastCommittedSmiles) {
                     lastCommittedSmiles = smiles;
                     calculateProperties(smiles);
                 }
             } catch (e) {
-                // Silently handle errors
+                // silently ignore
             }
         }
 
@@ -799,7 +853,7 @@
             document.getElementById('status-dot').classList.toggle('ready', ready);
         }
 
-        // Calculate molecular properties
+        // --- Property calculation ---
         function calculateProperties(smilesString) {
             if (!RDKit || !smilesString || smilesString.trim() === '') {
                 currentMolecules = [];
@@ -807,7 +861,6 @@
                 return;
             }
 
-            // Split by '.' for multiple molecules
             const smilesList = smilesString.split('.').filter(s => s.trim() !== '');
 
             if (smilesList.length === 0) {
@@ -837,11 +890,8 @@
 
         function calculateMolProps(mol, smiles) {
             const descriptors = JSON.parse(mol.get_descriptors());
-
-            // Count stereocenters from SMILES
             const definedStereo = (smiles.match(/@@?/g) || []).length;
 
-            // Get SVG for preview
             let svg = '';
             try {
                 svg = mol.get_svg(200, 150);
@@ -850,28 +900,25 @@
             }
 
             return {
-                smiles: smiles,
-                svg: svg,
-                mw: descriptors.exactmw ? parseFloat(descriptors.exactmw) : null,
-                clogp: descriptors.CrippenClogP ? parseFloat(descriptors.CrippenClogP) : null,
-                tpsa: descriptors.tpsa ? parseFloat(descriptors.tpsa) : null,
-                hba: descriptors.NumHBA ?? null,
-                hbd: descriptors.NumHBD ?? null,
-                fsp3: descriptors.FractionCSP3 ? parseFloat(descriptors.FractionCSP3) : null,
-                rotBonds: descriptors.NumRotatableBonds ?? null,
-                hac: descriptors.NumHeavyAtoms ?? null,
-                hetero: descriptors.NumHeteroatoms ?? null,
-                arRings: descriptors.NumAromaticRings ?? null,
-                stereo: definedStereo,
+                smiles,
+                svg,
+                mw:        descriptors.exactmw         ? parseFloat(descriptors.exactmw)         : null,
+                clogp:     descriptors.CrippenClogP     ? parseFloat(descriptors.CrippenClogP)     : null,
+                tpsa:      descriptors.tpsa             ? parseFloat(descriptors.tpsa)             : null,
+                hba:       descriptors.NumHBA           ?? null,
+                hbd:       descriptors.NumHBD           ?? null,
+                fsp3:      descriptors.FractionCSP3     ? parseFloat(descriptors.FractionCSP3)     : null,
+                rotBonds:  descriptors.NumRotatableBonds ?? null,
+                hac:       descriptors.NumHeavyAtoms    ?? null,
+                hetero:    descriptors.NumHeteroatoms   ?? null,
+                arRings:   descriptors.NumAromaticRings ?? null,
+                stereo:    definedStereo,
                 unspecified: 0
             };
         }
 
         function renderView() {
-            if (currentView === 'cards') {
-                renderMolecules();
-            }
-
+            if (currentView === 'cards') renderMolecules();
             document.getElementById('molecule-count').textContent =
                 `${currentMolecules.length} molecule${currentMolecules.length !== 1 ? 's' : ''}`;
         }
@@ -887,7 +934,7 @@
                         <circle cx="20" cy="16" r="2"/>
                         <path d="M6 8h3M15 8h3M6 16h3M15 16h3M12 9V6M12 18v-3"/>
                     </svg>
-                    <p>Draw a molecule in Ketcher to see its properties</p>
+                    <p>Draw a molecule to see its calculated properties</p>
                 </div>
             `;
         }
@@ -916,7 +963,7 @@
                         <div class="molecule-card">
                             <div class="molecule-header">
                                 <span>Mol ${index + 1}</span>
-                                <span class="molecule-smiles" style="color: var(--accent);">Invalid structure</span>
+                                <span class="molecule-smiles" style="color:#c0392b;">Invalid structure</span>
                             </div>
                         </div>
                     `;
@@ -980,7 +1027,7 @@
                         </div>
                     </div>
                 </div>
-            `}).join('');
+                `}).join('');
         }
 
         function escapeHtml(text) {
@@ -993,7 +1040,7 @@
             return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         }
 
-        // Lipinski highlighting functions
+        // --- Lipinski colour functions ---
         function getMWClass(mw) {
             if (mw === null) return '';
             if (mw > 500) return 'alert';
@@ -1018,7 +1065,7 @@
         function getHBAClass(hba) {
             if (hba === null) return '';
             if (hba > 10) return 'alert';
-            if (hba > 8) return 'warning';
+            if (hba > 8)  return 'warning';
             return '';
         }
 
@@ -1032,11 +1079,11 @@
         function getRotBClass(rotb) {
             if (rotb === null) return '';
             if (rotb > 10) return 'alert';
-            if (rotb > 7) return 'warning';
+            if (rotb > 7)  return 'warning';
             return '';
         }
 
-        // View toggle handlers
+        // --- View toggle ---
         document.getElementById('view-cards').addEventListener('click', () => {
             currentView = 'cards';
             document.getElementById('view-cards').classList.add('active');
@@ -1055,46 +1102,43 @@
             updatePkaSmiles();
         });
 
-        // pKa Calculate button handler
+        // pKa calculate button
         document.getElementById('calculate-pka-btn').addEventListener('click', calculatePka);
 
-        // Panel toggle - button is outside panel so it's always accessible
+        // Panel collapse toggle
         document.getElementById('panel-toggle').addEventListener('click', () => {
-            const panel = document.getElementById('properties-panel');
+            const panel  = document.getElementById('properties-panel');
             const toggle = document.getElementById('panel-toggle');
             const isCollapsed = panel.classList.toggle('collapsed');
             toggle.classList.toggle('collapsed', isCollapsed);
             toggle.querySelector('span').textContent = isCollapsed ? '▶' : '◀';
         });
 
-        // pKa API endpoint
+        // --- pKa ---
         const PKA_API_URL = 'https://web-production-0ede.up.railway.app/pka';
         let pkaChart = null;
 
-        // Update SMILES display in pKa tab
         function updatePkaSmiles() {
             const smilesDisplay = document.getElementById('pka-smiles');
-            const calculateBtn = document.getElementById('calculate-pka-btn');
+            const calculateBtn  = document.getElementById('calculate-pka-btn');
 
             if (currentMolecules.length > 0 && currentMolecules[0].smiles) {
                 smilesDisplay.textContent = currentMolecules[0].smiles;
                 calculateBtn.disabled = false;
             } else {
-                smilesDisplay.textContent = 'Draw a molecule in Ketcher';
+                smilesDisplay.textContent = 'Draw a molecule in the editor';
                 calculateBtn.disabled = true;
             }
         }
 
-        // Call pKa API
         async function calculatePka() {
             const smiles = currentMolecules[0]?.smiles;
             if (!smiles) return;
 
-            const resultsDiv = document.getElementById('pka-results');
+            const resultsDiv    = document.getElementById('pka-results');
             const chartContainer = document.getElementById('pka-chart-container');
-            const calculateBtn = document.getElementById('calculate-pka-btn');
+            const calculateBtn  = document.getElementById('calculate-pka-btn');
 
-            // Show loading state
             calculateBtn.disabled = true;
             calculateBtn.textContent = 'Calculating...';
             resultsDiv.innerHTML = '<div class="pka-loading">Calculating pKa properties...</div>';
@@ -1105,7 +1149,7 @@
                 const response = await fetch(PKA_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ smiles: smiles, pH: 7.4 })
+                    body: JSON.stringify({ smiles, pH: 7.4 })
                 });
 
                 const data = await response.json();
@@ -1123,9 +1167,8 @@
             }
         }
 
-        // Display pKa results
         function displayPkaResults(data) {
-            const resultsDiv = document.getElementById('pka-results');
+            const resultsDiv     = document.getElementById('pka-results');
             const chartContainer = document.getElementById('pka-chart-container');
 
             const acidicPka = data.pka?.acidic !== null ? data.pka.acidic.toFixed(2) : 'N/A';
@@ -1152,37 +1195,31 @@
                         <div class="pka-result-value">${data.microstates?.length || 0}</div>
                     </div>
                 </div>
-                <div class="pka-label" style="margin-top: 8px;">Dominant at pH 7.4</div>
-                <div class="smiles-display" style="font-size: 10px;">${dominant}</div>
+                <div class="pka-label" style="margin-top:8px;">Dominant at pH 7.4</div>
+                <div class="smiles-display" style="font-size:10px;">${dominant}</div>
             `;
             resultsDiv.classList.add('active');
 
-            // Draw distribution chart if data available
             if (data.distribution_curve && data.distribution_curve.microstates.length > 0) {
                 drawPkaChart(data.distribution_curve);
                 chartContainer.classList.add('active');
             }
         }
 
-        // Draw pKa distribution chart
         function drawPkaChart(curveData) {
             const ctx = document.getElementById('pka-chart').getContext('2d');
 
-            // Destroy existing chart before redrawing
-            if (pkaChart) {
-                pkaChart.destroy();
-            }
+            if (pkaChart) pkaChart.destroy();
 
-            // Colors for different microstates
+            // Use Boltzlab green palette for chart lines
             const colors = [
-                'rgba(78, 204, 163, 1)',   // green
-                'rgba(233, 69, 96, 1)',    // red
-                'rgba(255, 193, 7, 1)',    // yellow
-                'rgba(100, 149, 237, 1)',  // blue
-                'rgba(186, 85, 211, 1)'    // purple
+                'rgba(53, 88, 61, 1)',    // forest green
+                'rgba(103, 130, 107, 1)', // sage green
+                'rgba(180, 83, 9, 1)',    // amber
+                'rgba(59, 130, 246, 1)',  // blue
+                'rgba(139, 92, 246, 1)'   // purple
             ];
 
-            // Prepare datasets
             const datasets = curveData.microstates.map((ms, index) => ({
                 label: `Charge ${ms.charge >= 0 ? '+' : ''}${ms.charge}`,
                 data: ms.populations.map((pop, i) => ({ x: curveData.ph_values[i], y: pop })),
@@ -1202,23 +1239,23 @@
                     scales: {
                         x: {
                             type: 'linear',
-                            title: { display: true, text: 'pH', color: '#e0e0e0' },
+                            title: { display: true, text: 'pH', color: '#1f1f1f' },
                             min: 0,
                             max: 14,
-                            ticks: { color: '#888' },
-                            grid: { color: 'rgba(255,255,255,0.1)' }
+                            ticks: { color: '#6b7280' },
+                            grid:  { color: 'rgba(0,0,0,0.06)' }
                         },
                         y: {
-                            title: { display: true, text: 'Population', color: '#e0e0e0' },
+                            title: { display: true, text: 'Population', color: '#1f1f1f' },
                             min: 0,
                             max: 1,
-                            ticks: { color: '#888' },
-                            grid: { color: 'rgba(255,255,255,0.1)' }
+                            ticks: { color: '#6b7280' },
+                            grid:  { color: 'rgba(0,0,0,0.06)' }
                         }
                     },
                     plugins: {
                         legend: {
-                            labels: { color: '#e0e0e0', boxWidth: 12 }
+                            labels: { color: '#1f1f1f', boxWidth: 12 }
                         },
                         tooltip: {
                             callbacks: {
@@ -1230,7 +1267,7 @@
             });
         }
 
-        // Initialize
+        // --- Boot ---
         initRDKit();
         initKetcher();
     </script>
