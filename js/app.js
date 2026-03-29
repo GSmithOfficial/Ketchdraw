@@ -141,8 +141,54 @@ function _setLoadingStatus(text) {
 }
 
 // ----------------------------------------------------------------
-// View toggle (Cards / pKa)
+// Mode switching - BoltzDraw (2D) / BoltzStar (3D)
 // ----------------------------------------------------------------
+
+const MODES = {
+    draw: {
+        subtitle:   'Molecular Structure Editor',
+        panelTitle: 'Properties',
+        btnClass:   'active-draw',
+    },
+    star: {
+        subtitle:   '3D Structure Viewer',
+        panelTitle: 'Viewer',
+        btnClass:   'active-star',
+    },
+};
+
+let currentMode = 'draw';
+
+function switchMode(mode) {
+    if (mode === currentMode) return;
+    currentMode = mode;
+
+    const cfg = MODES[mode];
+
+    // Update subtitle
+    document.getElementById('app-subtitle').textContent = cfg.subtitle;
+
+    // Update panel title
+    document.getElementById('panel-title').textContent = cfg.panelTitle;
+
+    // Swap button active classes
+    document.getElementById('btn-draw').className =
+        'mode-btn' + (mode === 'draw' ? ' active-draw' : '');
+    document.getElementById('btn-star').className =
+        'mode-btn' + (mode === 'star' ? ' active-star' : '');
+
+    // Swap canvas
+    document.getElementById('ketcher-container').classList.toggle('hidden', mode === 'star');
+    document.getElementById('molstar-container').classList.toggle('hidden', mode === 'draw');
+
+    // Show/hide the Cards/pKa toggle (not relevant in BoltzStar)
+    document.getElementById('view-toggle').classList.toggle('hidden', mode === 'star');
+}
+
+document.getElementById('btn-draw').addEventListener('click', () => switchMode('draw'));
+document.getElementById('btn-star').addEventListener('click', () => switchMode('star'));
+
+
 
 document.getElementById('view-cards').addEventListener('click', () => {
     currentView = 'cards';

@@ -28,18 +28,41 @@
     <!-- Header -->
     <header class="app-header">
         <img class="app-logo" src="logo/boltz.png" alt="Boltz">
-        <h1 class="app-title">
-            <span class="brand">Boltz</span><span class="product">Draw</span>
-        </h1>
-        <span class="app-subtitle">Molecular Structure Editor</span>
+
+        <!-- Mode switcher - BoltzDraw (2D editor) / BoltzStar (3D viewer) -->
+        <nav class="app-switcher">
+            <button class="mode-btn active-draw" id="btn-draw">
+                <span class="btn-brand">Boltz</span><span class="btn-product">Draw</span>
+            </button>
+            <button class="mode-btn" id="btn-star">
+                <span class="btn-brand">Boltz</span><span class="btn-product">Star</span>
+            </button>
+        </nav>
+
+        <div class="header-divider"></div>
+        <span class="app-subtitle" id="app-subtitle">Molecular Structure Editor</span>
     </header>
 
     <!-- Main layout -->
     <div class="main-container">
 
-        <!-- Ketcher drawing canvas -->
+        <!-- BoltzDraw - Ketcher 2D canvas (visible by default) -->
         <div id="ketcher-container">
             <iframe id="ketcher-frame" src="ketcher/index.html" title="Molecular structure editor"></iframe>
+        </div>
+
+        <!-- BoltzStar - Molstar 3D viewer (hidden until implemented) -->
+        <div id="molstar-container" class="hidden">
+            <div class="molstar-placeholder">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
+                    <circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/>
+                    <circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
+                    <line x1="6" y1="6" x2="10" y2="11"/><line x1="18" y1="6" x2="14" y2="11"/>
+                    <line x1="6" y1="18" x2="10" y2="13"/><line x1="18" y1="18" x2="14" y2="13"/>
+                </svg>
+                <p>BoltzStar 3D viewer</p>
+                <span>Coming soon</span>
+            </div>
         </div>
 
         <!-- Panel collapse/expand toggle -->
@@ -55,9 +78,9 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2v-4M9 21H5a2 2 0 01-2-2v-4m0-6v6"/>
                     </svg>
-                    Properties
+                    <span id="panel-title">Properties</span>
                 </div>
-                <div class="view-toggle">
+                <div class="view-toggle" id="view-toggle">
                     <button id="view-cards" class="active">Cards</button>
                     <button id="view-pka">pKa</button>
                 </div>
