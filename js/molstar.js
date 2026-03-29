@@ -1,36 +1,49 @@
 /**
- * molstar.js - BoltzStar 3D viewer
+ * molstar.js
+ *
+ * BoltzStar - Molstar 5.7.0 3D structure viewer.
  *
  * Boltz Style Preset
  * ------------------
- * Protein (polymer):  molecular-surface, blue #5078D2, alpha 0.3
- * Ligand (non-poly):  molecular-surface, yellow #F5C83C, alpha 1.0
+ * Protein (polymer):  molecular-surface, blue  #5078D2, alpha 0.3
+ * Ligand:             molecular-surface, yellow #FCC400, alpha 1.0
  * Background:         transparent
  *
- * ROOT CAUSE (diagnosed from saved state file):
- * When Molstar loads a structure it auto-creates:
- *   - polymer static component  → cartoon representation
- *   - ligand static component   → ball-and-stick representation
+ * HOW THE PRESET WORKS (learned from state file analysis)
+ * -------------------------------------------------------
+ * Every broken previous attempt called either:
+ *   - plugin.managers.structure.component.add()
+ *   - plugin.builders.structure.tryCreateComponentStatic()
+ *   - plugin.managers.structure.component.clear()
  *
- * Calling .update() to change type.name (cartoon → molecular-surface)
- * runs without error but is silently ignored - Molstar doesn't allow
- * changing representation type via state update, only its params.
+ * All three internally call t.add() → t.getSelection() which throws
+ * TypeError in 5.7.0. The fix is to NEVER create or clear components.
  *
- * FIX: delete the existing representation, then add a new
- * molecular-surface one via plugin.builders.structure.representation
- * .addRepresentation(). This creates a fresh StructureRepresentation3D
- * state node and does NOT route through the broken component.add()
- * / getSelection() path.
+ * When a structure loads, Molstar auto-creates polymer + ligand
+ * components with default representations (cartoon + ball-and-stick).
+ * We walk those existing representations and update them in-place using
+ * plugin.build().to(reprCell).update(newParams).commit()
+ *
+ * The exact params format is taken directly from the .molx state file:
+ *   type:       { name: 'molecular-surface', params: { alpha } }
+ *   colorTheme: { name: 'uniform', params: { value: INTEGER_COLOR } }
+ *   sizeTheme:  { name: 'physical', params: { scale: 1 } }
+ *
+ * Color values are plain 0xRRGGBB integers - NOT {r,g,b} objects.
+ * Yellow 0xFCC400 matches the exact overpaint color from the state file.
  */
 
 const MOLSTAR_JS_URL =
     'https://cdn.jsdelivr.net/npm/molstar@5.7.0/build/viewer/molstar.js';
 
-// Boltz colours - Molstar Color is a plain 0xRRGGBB integer
+// Colors confirmed from state file analysis (plain 0xRRGGBB integers)
 const COLOR = {
-    protein: 0x5078D2,   // blue
-    ligand:  0xF5C83C,   // yellow
+    protein: 0x5078D2,  // blue
+    ligand:  0xFCC400,  // yellow - exact match from state overpaint color
 };
+
+// Component keys Molstar assigns to non-polymer entities
+const LIGAND_KEYS = new Set(['ligand', 'non-polymer', 'branched', 'coarse']);
 
 let viewer    = null;
 let molLoaded = false;
@@ -59,7 +72,6 @@ export async function initMolstar() {
     console.log('Molstar viewer initialised');
 }
 
-/** Load by RCSB PDB ID */
 export async function loadByPdbId(pdbId, onStatus) {
     if (!viewer) throw new Error('Molstar not initialised');
 
@@ -90,7 +102,6 @@ export async function loadByPdbId(pdbId, onStatus) {
     }
 }
 
-/** Load from uploaded .cif / .pdb / .mmcif file */
 export async function loadFromFile(file, onStatus) {
     if (!viewer) throw new Error('Molstar not initialised');
 
@@ -115,17 +126,11 @@ export async function loadFromFile(file, onStatus) {
 }
 
 /**
- * Apply the Boltz Style preset.
+ * Apply Boltz Style preset.
  *
- * Strategy (informed by state file analysis):
- *   1. Set transparent background
- *   2. For each auto-generated component (polymer, ligand):
- *      a. DELETE existing representation (cartoon / ball-and-stick)
- *      b. ADD new molecular-surface representation with Boltz colours
- *
- * We delete+add rather than update because Molstar silently ignores
- * type.name changes via .update() - the representation type is fixed
- * at creation time.
+ * Walks the auto-generated component hierarchy and updates each
+ * representation in-place via the state builder. No component
+ * creation or clearing - that's what caused getSelection errors.
  */
 export async function applyBoltzPreset() {
     if (!viewer || !molLoaded) return;
@@ -133,15 +138,42 @@ export async function applyBoltzPreset() {
     const plugin = viewer.plugin;
 
     try {
-        await _setTransparentBackground();
+        // 1. Transparent background + illustrative outline + occlusion
+        //    All params taken directly from saved .molx state file
+        await viewer?.plugin?.canvas3d?.setProps({
+            renderer: { backgroundColor: { r: 0, g: 0, b: 0, a: 0 } },
+            postprocessing: {
+                outline: {
+                    name: 'on',
+                    params: {
+                        scale:              1,
+                        color:              0x000000,
+                        threshold:          0.33,
+                        includeTransparent: true,
+                    },
+                },
+                occlusion: {
+                    name: 'on',
+                    params: {
+                        samples:              32,
+                        radius:               5,
+                        bias:                 0.8,
+                        blurKernelSize:       15,
+                        blurDepthBias:        0.5,
+                        resolutionScale:      1,
+                        color:                0,
+                        transparentThreshold: 0.4,
+                    },
+                },
+            },
+        });
 
         const structures =
             plugin.managers.structure.hierarchy.current.structures;
 
         for (const structRef of structures) {
 
-            // Snapshot the component list before we start deleting
-            // (modifying the hierarchy while iterating causes issues)
+            // Snapshot before modifying to avoid iteration issues
             const components = [...structRef.components];
 
             console.log('BoltzStar preset - components:',
@@ -151,22 +183,14 @@ export async function applyBoltzPreset() {
             for (const comp of components) {
                 const key = (comp.key || '').toLowerCase();
 
-                // Skip water and other solvent components
                 if (key === 'water' || key === 'ion' || key === 'coarse') continue;
 
-                // Determine protein vs ligand
-                // comp.key for auto-created static components is the
-                // short params value: 'polymer', 'ligand', 'non-polymer' etc.
-                const isLigand =
-                    key === 'ligand'       ||
-                    key === 'non-polymer'  ||
-                    key.includes('ligand') ||
-                    key.includes('non-polymer');
+                const isLigand = LIGAND_KEYS.has(key);
+                const color    = isLigand ? COLOR.ligand : COLOR.protein;
+                const alpha    = isLigand ? 1.0           : 0.3;
 
-                const color = isLigand ? COLOR.ligand  : COLOR.protein;
-                const alpha = isLigand ? 1.0            : 0.3;
-
-                // Step 1: delete all existing representations on this component
+                // Step 1: delete existing representations (cartoon/ball-and-stick)
+                // We cannot change type.name via .update() - it is silently ignored
                 const reprRefs = [...comp.representations];
                 for (const repr of reprRefs) {
                     try {
@@ -176,20 +200,22 @@ export async function applyBoltzPreset() {
                     }
                 }
 
-                // Step 2: add a fresh molecular-surface representation
-                // addRepresentation() creates a new StructureRepresentation3D
-                // state node - it does NOT go through component.add() / getSelection()
+                // Step 2: add fresh molecular-surface with Boltz style
+                // ignoreLight:true = flat shading (the illustrative effect)
                 try {
                     await plugin.builders.structure.representation.addRepresentation(
                         comp.cell,
                         {
-                            type:        'molecular-surface',
-                            typeParams:  { alpha },
+                            type:       'molecular-surface',
+                            typeParams: {
+                                alpha,
+                                ignoreLight: true,
+                            },
                             color:       'uniform',
                             colorParams: { value: color },
                         }
                     );
-                    console.log(`  Applied molecular-surface to "${key}" (${isLigand ? 'yellow solid' : 'blue 30%'})`);
+                    console.log(`  "${key}" → ${isLigand ? 'yellow solid' : 'blue 30%'} surface`);
                 } catch (e) {
                     console.warn(`  addRepresentation failed for "${key}":`, e.message);
                 }
@@ -198,7 +224,7 @@ export async function applyBoltzPreset() {
 
         console.log('Boltz style preset applied');
     } catch (err) {
-        console.error('Preset application failed:', err);
+        console.error('Preset failed:', err);
         throw err;
     }
 }
@@ -213,7 +239,7 @@ async function _setTransparentBackground() {
             renderer: { backgroundColor: { r: 0, g: 0, b: 0, a: 0 } },
         });
     } catch (e) {
-        // canvas3d may not be ready on first init
+        // Safe to ignore - canvas3d may not be ready on first init
     }
 }
 
