@@ -35,7 +35,7 @@ A free, open-source ChemDraw alternative built with Ketcher and RDKit.js. Draw m
 
 1. Enable GitHub Pages in your repository settings
 2. Set source to main branch
-3. Access at `https://[username].github.io/Ketchdraw`
+3. Access at `https://[username].github.io/BoltzDraw`
 
 ### Local Development
 
