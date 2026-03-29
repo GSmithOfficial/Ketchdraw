@@ -5,19 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BoltzDraw - Molecular Structure Editor</title>
 
-    <!-- Boltz logo as favicon and dock/home screen icon -->
     <link rel="icon" type="image/png" href="logo/boltz.png">
     <link rel="apple-touch-icon" href="logo/boltz.png">
 
-    <!-- Chart.js for pKa distribution plots -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- BoltzDraw styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/molstar@3.45.0/build/viewer/molstar.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-    <!-- Loading overlay - shown until RDKit + Ketcher are both ready -->
     <div class="loading-overlay" id="loading">
         <img class="loading-logo" src="logo/boltz.png" alt="Boltz">
         <div class="loading-spinner"></div>
@@ -25,11 +21,8 @@
         <div class="loading-subtext" id="loading-status">Initializing RDKit...</div>
     </div>
 
-    <!-- Header -->
     <header class="app-header">
         <img class="app-logo" src="logo/boltz.png" alt="Boltz">
-
-        <!-- Mode switcher - BoltzDraw (2D editor) / BoltzStar (3D viewer) -->
         <nav class="app-switcher">
             <button class="mode-btn active-draw" id="btn-draw">
                 <span class="btn-brand">Boltz</span><span class="btn-product">Draw</span>
@@ -38,39 +31,26 @@
                 <span class="btn-brand">Boltz</span><span class="btn-product">Star</span>
             </button>
         </nav>
-
         <div class="header-divider"></div>
         <span class="app-subtitle" id="app-subtitle">Molecular Structure Editor</span>
     </header>
 
-    <!-- Main layout -->
     <div class="main-container">
 
-        <!-- BoltzDraw - Ketcher 2D canvas (visible by default) -->
+        <!-- BoltzDraw: Ketcher 2D canvas -->
         <div id="ketcher-container">
             <iframe id="ketcher-frame" src="ketcher/index.html" title="Molecular structure editor"></iframe>
         </div>
 
-        <!-- BoltzStar - Molstar 3D viewer (hidden until implemented) -->
+        <!-- BoltzStar: Molstar 3D viewer -->
         <div id="molstar-container" class="hidden">
-            <div class="molstar-placeholder">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3">
-                    <circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/>
-                    <circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/>
-                    <line x1="6" y1="6" x2="10" y2="11"/><line x1="18" y1="6" x2="14" y2="11"/>
-                    <line x1="6" y1="18" x2="10" y2="13"/><line x1="18" y1="18" x2="14" y2="13"/>
-                </svg>
-                <p>BoltzStar 3D viewer</p>
-                <span>Coming soon</span>
-            </div>
+            <div id="molstar-viewport"></div>
         </div>
 
-        <!-- Panel collapse/expand toggle -->
         <button class="panel-toggle" id="panel-toggle" title="Toggle Properties Panel">
             <span>◀</span>
         </button>
 
-        <!-- Properties panel -->
         <div class="properties-panel" id="properties-panel">
 
             <div class="panel-header">
@@ -86,7 +66,7 @@
                 </div>
             </div>
 
-            <!-- Cards view - molecule property cards rendered here -->
+            <!-- BoltzDraw: molecule property cards -->
             <div class="molecules-list" id="molecules-list">
                 <div class="no-molecules">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -101,7 +81,7 @@
                 </div>
             </div>
 
-            <!-- pKa view - API call + distribution chart -->
+            <!-- BoltzDraw: pKa tab -->
             <div class="pka-container" id="pka-container">
                 <div class="pka-input-section">
                     <label class="pka-label">Selected Molecule</label>
@@ -116,7 +96,67 @@
                 </div>
             </div>
 
-            <!-- Status bar -->
+            <!-- BoltzStar: viewer controls panel -->
+            <div class="star-panel hidden" id="star-panel">
+
+                <div class="star-section">
+                    <label class="star-label">Load Structure</label>
+
+                    <div class="star-input-row">
+                        <input type="text"
+                               id="pdb-id-input"
+                               class="star-text-input"
+                               placeholder="PDB ID e.g. 1ABC"
+                               maxlength="4"
+                               spellcheck="false"
+                               autocomplete="off">
+                        <button class="star-load-btn" id="load-pdb-btn">Load</button>
+                    </div>
+
+                    <div class="star-or"><span>or</span></div>
+
+                    <label class="star-upload-label" for="structure-file-input">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Upload .cif / .pdb file
+                    </label>
+                    <input type="file"
+                           id="structure-file-input"
+                           accept=".cif,.pdb,.mmcif"
+                           style="display:none">
+
+                    <div class="star-status hidden" id="star-load-status"></div>
+                </div>
+
+                <div class="star-section">
+                    <label class="star-label">Boltz Style Preset</label>
+
+                    <div class="preset-row">
+                        <div class="preset-swatch protein-swatch"></div>
+                        <span class="preset-name">Protein surface</span>
+                        <span class="preset-val">blue · 30%</span>
+                    </div>
+                    <div class="preset-row">
+                        <div class="preset-swatch ligand-swatch"></div>
+                        <span class="preset-name">Ligand surface</span>
+                        <span class="preset-val">yellow · solid</span>
+                    </div>
+                    <div class="preset-row">
+                        <div class="preset-swatch transparent-swatch"></div>
+                        <span class="preset-name">Background</span>
+                        <span class="preset-val">transparent</span>
+                    </div>
+
+                    <button class="star-apply-btn" id="apply-preset-btn" disabled>
+                        Apply Boltz Style
+                    </button>
+                </div>
+
+            </div>
+
             <div class="status-bar">
                 <div class="status-indicator">
                     <div class="status-dot" id="status-dot"></div>
@@ -128,7 +168,6 @@
         </div>
     </div>
 
-    <!-- App entry point - ES module, imports all other JS modules -->
     <script type="module" src="js/app.js"></script>
 
 </body>

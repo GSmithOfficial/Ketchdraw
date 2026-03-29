@@ -9,9 +9,10 @@
  *   - Delegates pKa tab to pka.js
  */
 
-import { initKetcher }                    from './ketcher.js';
+import { initKetcher }                          from './ketcher.js';
 import { calculateProperties, renderMolecules } from './properties.js';
-import { updatePkaSmiles, calculatePka }  from './pka.js';
+import { updatePkaSmiles, calculatePka }         from './pka.js';
+import { initMolstar, loadByPdbId, loadFromFile, applyBoltzPreset } from './molstar.js';
 
 // ----------------------------------------------------------------
 // App state
@@ -157,19 +158,18 @@ const MODES = {
     },
 };
 
-let currentMode = 'draw';
+let currentMode     = 'draw';
+let molstarInitted  = false;
 
-function switchMode(mode) {
+async function switchMode(mode) {
     if (mode === currentMode) return;
     currentMode = mode;
 
     const cfg = MODES[mode];
 
-    // Update subtitle
+    // Update header
     document.getElementById('app-subtitle').textContent = cfg.subtitle;
-
-    // Update panel title
-    document.getElementById('panel-title').textContent = cfg.panelTitle;
+    document.getElementById('panel-title').textContent  = cfg.panelTitle;
 
     // Swap button active classes
     document.getElementById('btn-draw').className =
@@ -177,12 +177,34 @@ function switchMode(mode) {
     document.getElementById('btn-star').className =
         'mode-btn' + (mode === 'star' ? ' active-star' : '');
 
-    // Swap canvas
+    // Swap canvases
     document.getElementById('ketcher-container').classList.toggle('hidden', mode === 'star');
     document.getElementById('molstar-container').classList.toggle('hidden', mode === 'draw');
 
-    // Show/hide the Cards/pKa toggle (not relevant in BoltzStar)
-    document.getElementById('view-toggle').classList.toggle('hidden', mode === 'star');
+    // Swap panel content
+    const isDraw = mode === 'draw';
+    document.getElementById('view-toggle').classList.toggle('hidden',    !isDraw);
+    document.getElementById('molecules-list').classList.toggle('hidden', !isDraw);
+    document.getElementById('pka-container').classList.toggle('hidden',   true);   // always reset pKa
+    document.getElementById('star-panel').classList.toggle('hidden',     isDraw);
+
+    // Reset Cards tab as active when returning to BoltzDraw
+    if (isDraw) {
+        _setDrawView('cards');
+    }
+
+    // Lazy-init Molstar on first switch to BoltzStar
+    if (mode === 'star' && !molstarInitted) {
+        molstarInitted = true;
+        _updateStatus('Loading Molstar...', false);
+        try {
+            await initMolstar();
+            _updateStatus('Ready', true);
+        } catch (err) {
+            console.error('Molstar init failed:', err);
+            _updateStatus('Molstar failed to load', false);
+        }
+    }
 }
 
 document.getElementById('btn-draw').addEventListener('click', () => switchMode('draw'));
@@ -190,23 +212,22 @@ document.getElementById('btn-star').addEventListener('click', () => switchMode('
 
 
 
-document.getElementById('view-cards').addEventListener('click', () => {
-    currentView = 'cards';
-    document.getElementById('view-cards').classList.add('active');
-    document.getElementById('view-pka').classList.remove('active');
-    document.getElementById('molecules-list').classList.remove('hidden');
-    document.getElementById('pka-container').classList.remove('active');
-    renderMolecules(currentMolecules);
-});
+// ----------------------------------------------------------------
+// View toggle (Cards / pKa) - BoltzDraw only
+// ----------------------------------------------------------------
 
-document.getElementById('view-pka').addEventListener('click', () => {
-    currentView = 'pka';
-    document.getElementById('view-pka').classList.add('active');
-    document.getElementById('view-cards').classList.remove('active');
-    document.getElementById('molecules-list').classList.add('hidden');
-    document.getElementById('pka-container').classList.add('active');
-    updatePkaSmiles(currentMolecules);
-});
+function _setDrawView(view) {
+    const isCards = view === 'cards';
+    document.getElementById('view-cards').classList.toggle('active', isCards);
+    document.getElementById('view-pka').classList.toggle('active', !isCards);
+    document.getElementById('molecules-list').classList.toggle('hidden', !isCards);
+    document.getElementById('pka-container').classList.toggle('active', !isCards);
+    if (isCards) renderMolecules(currentMolecules);
+    else         updatePkaSmiles(currentMolecules);
+}
+
+document.getElementById('view-cards').addEventListener('click', () => _setDrawView('cards'));
+document.getElementById('view-pka').addEventListener('click',   () => _setDrawView('pka'));
 
 // ----------------------------------------------------------------
 // pKa button
@@ -227,3 +248,44 @@ document.getElementById('panel-toggle').addEventListener('click', () => {
     toggle.classList.toggle('collapsed', collapsed);
     toggle.querySelector('span').textContent = collapsed ? '▶' : '◀';
 });
+
+// ----------------------------------------------------------------
+// BoltzStar - Load by PDB ID
+// ----------------------------------------------------------------
+
+document.getElementById('load-pdb-btn').addEventListener('click', () => {
+    const id = document.getElementById('pdb-id-input').value.trim();
+    loadByPdbId(id, _setStarStatus);
+});
+
+document.getElementById('pdb-id-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loadByPdbId(e.target.value.trim(), _setStarStatus);
+});
+
+// ----------------------------------------------------------------
+// BoltzStar - Load from file
+// ----------------------------------------------------------------
+
+document.getElementById('structure-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) loadFromFile(file, _setStarStatus);
+});
+
+// ----------------------------------------------------------------
+// BoltzStar - Apply Boltz Style preset
+// ----------------------------------------------------------------
+
+document.getElementById('apply-preset-btn').addEventListener('click', () => {
+    applyBoltzPreset();
+});
+
+// ----------------------------------------------------------------
+// Status helpers
+// ----------------------------------------------------------------
+
+function _setStarStatus(message, type) {
+    const el = document.getElementById('star-load-status');
+    el.textContent = message;
+    el.className   = `star-status ${type}`;
+    el.classList.remove('hidden');
+}

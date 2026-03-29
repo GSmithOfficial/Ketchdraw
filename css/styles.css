@@ -682,3 +682,234 @@ body {
 .pka-container::-webkit-scrollbar-thumb:hover {
     background: var(--green-sage);
 }
+
+/* ================================================================
+   MOLSTAR CONTAINER
+================================================================ */
+#molstar-container {
+    flex: 1;
+    height: 100%;
+    background: #0e0e0e;
+    position: relative;
+}
+
+/* Molstar mounts into this div - must fill the container */
+#molstar-viewport {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+}
+
+/* ================================================================
+   BOLTZSTAR PANEL
+================================================================ */
+.star-panel {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg-cream);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.star-section {
+    background: var(--bg-white);
+    border-bottom: 1px solid var(--border);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.star-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 2px;
+}
+
+/* PDB input row */
+.star-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.star-text-input {
+    flex: 1;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Mono', monospace;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.star-text-input:focus {
+    border-color: var(--green-dark);
+}
+
+.star-load-btn {
+    height: 34px;
+    padding: 0 14px;
+    background: var(--near-black);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.star-load-btn:hover {
+    background: var(--green-dark);
+}
+
+/* Or divider */
+.star-or {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.star-or::before,
+.star-or::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+/* File upload button */
+.star-upload-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 34px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.star-upload-label:hover {
+    border-color: var(--green-dark);
+    color: var(--green-dark);
+    background: var(--green-subtle);
+}
+
+/* Load status message */
+.star-status {
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.star-status.loading {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+}
+
+.star-status.success {
+    background: var(--green-subtle);
+    color: var(--green-dark);
+    font-weight: 500;
+}
+
+.star-status.error {
+    background: #fef2f2;
+    color: var(--alert);
+    border: 1px solid #fca5a5;
+}
+
+/* Preset rows */
+.preset-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.preset-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* Boltz preset colours - matching the 3D visual */
+.protein-swatch {
+    background: rgba(80, 120, 210, 0.3);
+    border: 1px solid rgba(80, 120, 210, 0.7);
+}
+
+.ligand-swatch {
+    background: #f5c83c;
+    border: 1px solid #c9a020;
+}
+
+.transparent-swatch {
+    background: transparent;
+    border: 1px dashed var(--text-muted);
+}
+
+.preset-name {
+    font-size: 12px;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.preset-val {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* Apply button */
+.star-apply-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--green-dark);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, opacity 0.2s;
+    margin-top: 4px;
+}
+
+.star-apply-btn:hover:not(:disabled) {
+    background: var(--green-deep);
+}
+
+.star-apply-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Scrollbar for star panel */
+.star-panel::-webkit-scrollbar { width: 5px; }
+.star-panel::-webkit-scrollbar-track { background: transparent; }
+.star-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.star-panel::-webkit-scrollbar-thumb:hover { background: var(--green-sage); }
