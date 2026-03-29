@@ -1,4 +1,4 @@
-# KetchDraw
+# BoltzDraw
 
 A free, open-source ChemDraw alternative built with Ketcher and RDKit.js. Draw molecular structures and see calculated properties in real-time.
 
