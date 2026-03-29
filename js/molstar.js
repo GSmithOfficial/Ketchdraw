@@ -25,7 +25,7 @@
  */
 
 const MOLSTAR_JS_URL =
-    'https://cdn.jsdelivr.net/npm/molstar@3.45.0/build/viewer/molstar.js';
+    'https://cdn.jsdelivr.net/npm/molstar@5.7.0/build/viewer/molstar.js';
 
 // Boltz preset colours - Molstar Color is a plain 0xRRGGBB integer
 const COLOR = {
