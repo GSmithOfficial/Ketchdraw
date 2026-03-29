@@ -5,45 +5,41 @@
  *
  * Boltz Style Preset
  * ------------------
- * Protein (polymer):  molecular-surface, blue (#5078d2), alpha 0.3
- * Ligand:             molecular-surface, yellow (#f5c83c), alpha 1.0
- * Background:         transparent (alpha 0)
+ * Protein (polymer):  molecular-surface, blue #5078D2, alpha 0.3
+ * Ligand (non-poly):  molecular-surface, yellow #F5C83C, alpha 1.0
+ * Background:         transparent
  *
- * FIX: The previous version used plugin.managers.structure.component.add()
- * which throws "t.getSelection is not a function" in Molstar 3.45 because
- * it expects an internal SelectionEntry format, not a simple {name, params}.
+ * KEY FIX: Molstar's Color type is a plain number (0xRRGGBB).
+ * Passing an {r,g,b} object causes silent failure - the representation
+ * renders with a default colour and ignores opacity. All colour values
+ * must be hex integers.
  *
- * This version uses plugin.builders.structure which is the correct stable
- * API for programmatically creating components and representations.
+ * The component.add() API (used in v1) threw "t.getSelection is not a
+ * function" in 3.45 because it expects internal SelectionEntry objects.
+ * This version uses plugin.builders.structure which is the stable API.
  */
 
 const MOLSTAR_JS_URL =
     'https://cdn.jsdelivr.net/npm/molstar@3.45.0/build/viewer/molstar.js';
 
-// Boltz preset colour values (RGB 0-255)
-const BOLTZ_PRESET = {
-    protein: { r: 80,  g: 120, b: 210 },  // blue
-    ligand:  { r: 245, g: 200, b: 60  },  // yellow
+// ---- Boltz preset colours as Molstar Color numbers (0xRRGGBB) ----
+const COLOR = {
+    protein: 0x5078D2,   // blue
+    ligand:  0xF5C83C,   // yellow
 };
 
-let viewer    = null;   // molstar.Viewer instance
-let molLoaded = false;  // true once a structure is in the scene
+let viewer    = null;
+let molLoaded = false;
 
 // ----------------------------------------------------------------
 // Public API
 // ----------------------------------------------------------------
 
-/**
- * Initialise Molstar and mount it into #molstar-viewport.
- * Safe to call multiple times - only initialises once.
- */
 export async function initMolstar() {
     if (viewer) return;
-
     await _loadMolstarScript();
 
     viewer = await window.molstar.Viewer.create('molstar-viewport', {
-        // Hide Molstar's built-in UI chrome - we provide our own panel
         layoutShowControls:        false,
         layoutShowRemoteState:     false,
         layoutShowSequence:        false,
@@ -55,17 +51,12 @@ export async function initMolstar() {
         viewportShowAnimation:     false,
     });
 
-    // Set transparent background immediately after init
     await _setTransparentBackground();
-
     console.log('Molstar viewer initialised');
 }
 
 /**
- * Load a structure by RCSB PDB ID.
- * @param {string} pdbId     - 4-character PDB accession code
- * @param {Function} onStatus - callback(message, type)
- *                              type: 'loading' | 'success' | 'error'
+ * Load by RCSB PDB ID.
  */
 export async function loadByPdbId(pdbId, onStatus) {
     if (!viewer) throw new Error('Molstar not initialised');
@@ -82,8 +73,11 @@ export async function loadByPdbId(pdbId, onStatus) {
         await viewer.plugin.clear();
         molLoaded = false;
 
-        const url = `https://files.rcsb.org/download/${id}.cif`;
-        await viewer.loadStructureFromUrl(url, 'mmcif', false);
+        await viewer.loadStructureFromUrl(
+            `https://files.rcsb.org/download/${id}.cif`,
+            'mmcif',
+            false
+        );
 
         molLoaded = true;
         onStatus(`Loaded ${id}`, 'success');
@@ -95,9 +89,7 @@ export async function loadByPdbId(pdbId, onStatus) {
 }
 
 /**
- * Load a structure from an uploaded File object (.cif / .pdb / .mmcif).
- * @param {File} file
- * @param {Function} onStatus
+ * Load from uploaded .cif / .pdb file.
  */
 export async function loadFromFile(file, onStatus) {
     if (!viewer) throw new Error('Molstar not initialised');
@@ -123,14 +115,11 @@ export async function loadFromFile(file, onStatus) {
 }
 
 /**
- * Apply the Boltz Style preset to the currently loaded structure.
+ * Apply the Boltz Style preset.
  *
- * Uses plugin.builders.structure (stable API) rather than
- * plugin.managers.structure.component.add() (broken in 3.45).
- *
- *   Polymer (protein) → blue molecular surface, alpha 0.3
- *   Ligand            → yellow molecular surface, alpha 1.0
- *   Background        → transparent
+ * Protein  → blue (#5078D2) molecular surface, 30% opacity
+ * Ligand   → yellow (#F5C83C) molecular surface, fully opaque
+ * Canvas   → transparent background
  */
 export async function applyBoltzPreset() {
     if (!viewer || !molLoaded) return;
@@ -141,48 +130,58 @@ export async function applyBoltzPreset() {
         // 1. Transparent background
         await _setTransparentBackground();
 
-        const structures = plugin.managers.structure.hierarchy.current.structures;
+        const structures =
+            plugin.managers.structure.hierarchy.current.structures;
 
         for (const structRef of structures) {
-            // 2. Clear all existing representations on this structure
-            await plugin.managers.structure.component.clear([structRef]);
-
             const cell = structRef.cell;
 
-            // 3. Polymer (protein) - blue surface at 30% opacity
-            const polymer = await plugin.builders.structure.tryCreateComponentStatic(
-                cell, 'polymer', {}, 'boltz-polymer'
-            );
-            if (polymer) {
-                await plugin.builders.structure.representation.addRepresentation(polymer, {
-                    type:        'molecular-surface',
-                    typeParams:  { alpha: 0.3 },
-                    color:       'uniform',
-                    colorParams: { value: BOLTZ_PRESET.protein },
-                });
-            }
+            // 2. Wipe existing representations so we start clean
+            await plugin.managers.structure.component.clear([structRef]);
 
-            // 4. Ligand - yellow solid surface
-            const ligand = await plugin.builders.structure.tryCreateComponentStatic(
-                cell, 'ligand', {}, 'boltz-ligand'
-            );
-            if (ligand) {
-                await plugin.builders.structure.representation.addRepresentation(ligand, {
-                    type:        'molecular-surface',
-                    typeParams:  { alpha: 1.0 },
-                    color:       'uniform',
-                    colorParams: { value: BOLTZ_PRESET.ligand },
-                });
-            }
+            // 3. All work done inside one dataTransaction for atomicity
+            await plugin.dataTransaction(async () => {
 
-            // 5. If no ligand found (pocket-only files), still looks good
-            // with just the blue protein surface
+                // ---- Polymer (protein chain) ----
+                // tryCreateComponentStatic returns undefined if the
+                // selection is empty (e.g. nucleic-only files)
+                const polymerComp =
+                    await plugin.builders.structure.tryCreateComponentStatic(
+                        cell, 'polymer', {}, 'boltz-polymer'
+                    );
+
+                if (polymerComp) {
+                    await plugin.builders.structure.representation
+                        .addRepresentation(polymerComp, {
+                            type:        'molecular-surface',
+                            typeParams:  { alpha: 0.3 },
+                            color:       'uniform',
+                            colorParams: { value: COLOR.protein },
+                        });
+                }
+
+                // ---- Ligand (non-polymer, non-water) ----
+                const ligandComp =
+                    await plugin.builders.structure.tryCreateComponentStatic(
+                        cell, 'ligand', {}, 'boltz-ligand'
+                    );
+
+                if (ligandComp) {
+                    await plugin.builders.structure.representation
+                        .addRepresentation(ligandComp, {
+                            type:        'molecular-surface',
+                            typeParams:  { alpha: 1.0 },
+                            color:       'uniform',
+                            colorParams: { value: COLOR.ligand },
+                        });
+                }
+            });
         }
 
         console.log('Boltz style preset applied');
     } catch (err) {
         console.error('Preset application failed:', err);
-        throw err; // let app.js surface this to the user if needed
+        throw err;
     }
 }
 
@@ -191,22 +190,22 @@ export async function applyBoltzPreset() {
 // ----------------------------------------------------------------
 
 async function _setTransparentBackground() {
-    if (!viewer?.plugin?.canvas3d) return;
-    await viewer.plugin.canvas3d.setProps({
-        renderer: {
-            backgroundColor: { r: 0, g: 0, b: 0, a: 0 },
-        },
-    });
+    try {
+        await viewer?.plugin?.canvas3d?.setProps({
+            renderer: { backgroundColor: { r: 0, g: 0, b: 0, a: 0 } },
+        });
+    } catch (e) {
+        // canvas3d may not be ready yet on first init - safe to ignore
+    }
 }
 
 function _loadMolstarScript() {
     if (window.molstar) return Promise.resolve();
-
     return new Promise((resolve, reject) => {
-        const script   = document.createElement('script');
-        script.src     = MOLSTAR_JS_URL;
-        script.onload  = resolve;
-        script.onerror = () => reject(new Error('Failed to load Molstar from CDN'));
-        document.head.appendChild(script);
+        const s   = document.createElement('script');
+        s.src     = MOLSTAR_JS_URL;
+        s.onload  = resolve;
+        s.onerror = () => reject(new Error('Failed to load Molstar from CDN'));
+        document.head.appendChild(s);
     });
 }
