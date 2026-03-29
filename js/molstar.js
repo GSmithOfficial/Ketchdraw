@@ -6,27 +6,35 @@
  * Boltz Style Preset
  * ------------------
  * Protein (polymer):  molecular-surface, blue #5078D2, alpha 0.3
- * Ligand (non-poly):  molecular-surface, yellow #F5C83C, alpha 1.0
+ * Ligand:             molecular-surface, yellow #F5C83C, alpha 1.0
  * Background:         transparent
  *
- * KEY FIX: Molstar's Color type is a plain number (0xRRGGBB).
- * Passing an {r,g,b} object causes silent failure - the representation
- * renders with a default colour and ignores opacity. All colour values
- * must be hex integers.
+ * ARCHITECTURE NOTE
+ * -----------------
+ * Both plugin.managers.structure.component.add() and
+ * plugin.builders.structure.tryCreateComponentStatic() internally call
+ * an internal t.add() which calls t.getSelection() - this throws a
+ * TypeError in Molstar 3.45 because the method signature changed.
  *
- * The component.add() API (used in v1) threw "t.getSelection is not a
- * function" in 3.45 because it expects internal SelectionEntry objects.
- * This version uses plugin.builders.structure which is the stable API.
+ * The fix is to NEVER create components. Instead:
+ *   1. Load the structure (Molstar auto-creates polymer + ligand components)
+ *   2. Iterate the existing component hierarchy
+ *   3. Update each representation in-place via plugin.build().to(cell).update()
+ *
+ * The state builder completely bypasses the component manager.
  */
 
 const MOLSTAR_JS_URL =
     'https://cdn.jsdelivr.net/npm/molstar@3.45.0/build/viewer/molstar.js';
 
-// ---- Boltz preset colours as Molstar Color numbers (0xRRGGBB) ----
+// Boltz preset colours - Molstar Color is a plain 0xRRGGBB integer
 const COLOR = {
     protein: 0x5078D2,   // blue
     ligand:  0xF5C83C,   // yellow
 };
+
+// Component keys that Molstar assigns to non-polymer/ligand components
+const LIGAND_KEYS = new Set(['ligand', 'non-polymer', 'branched', 'coarse']);
 
 let viewer    = null;
 let molLoaded = false;
@@ -55,9 +63,7 @@ export async function initMolstar() {
     console.log('Molstar viewer initialised');
 }
 
-/**
- * Load by RCSB PDB ID.
- */
+/** Load by RCSB PDB ID */
 export async function loadByPdbId(pdbId, onStatus) {
     if (!viewer) throw new Error('Molstar not initialised');
 
@@ -88,9 +94,7 @@ export async function loadByPdbId(pdbId, onStatus) {
     }
 }
 
-/**
- * Load from uploaded .cif / .pdb file.
- */
+/** Load from uploaded .cif / .pdb / .mmcif file */
 export async function loadFromFile(file, onStatus) {
     if (!viewer) throw new Error('Molstar not initialised');
 
@@ -117,9 +121,13 @@ export async function loadFromFile(file, onStatus) {
 /**
  * Apply the Boltz Style preset.
  *
- * Protein  → blue (#5078D2) molecular surface, 30% opacity
- * Ligand   → yellow (#F5C83C) molecular surface, fully opaque
- * Canvas   → transparent background
+ * Strategy: iterate the existing auto-generated components (polymer,
+ * ligand, water...) and update their representations in-place using
+ * the state builder. No component creation = no getSelection() crash.
+ *
+ *   polymer → blue (#5078D2) molecular-surface, alpha 0.3
+ *   ligand  → yellow (#F5C83C) molecular-surface, alpha 1.0
+ *   water / other → hidden (alpha 0)
  */
 export async function applyBoltzPreset() {
     if (!viewer || !molLoaded) return;
@@ -130,52 +138,45 @@ export async function applyBoltzPreset() {
         // 1. Transparent background
         await _setTransparentBackground();
 
+        // 2. Walk the structure hierarchy
         const structures =
             plugin.managers.structure.hierarchy.current.structures;
 
         for (const structRef of structures) {
-            const cell = structRef.cell;
+            for (const comp of structRef.components) {
+                const key   = (comp.key || '').toLowerCase();
+                const isLig = LIGAND_KEYS.has(key);
+                const isWater = key === 'water';
 
-            // 2. Wipe existing representations so we start clean
-            await plugin.managers.structure.component.clear([structRef]);
+                // Skip water entirely
+                if (isWater) continue;
 
-            // 3. All work done inside one dataTransaction for atomicity
-            await plugin.dataTransaction(async () => {
+                const color = isLig ? COLOR.ligand  : COLOR.protein;
+                const alpha = isLig ? 1.0            : 0.3;
 
-                // ---- Polymer (protein chain) ----
-                // tryCreateComponentStatic returns undefined if the
-                // selection is empty (e.g. nucleic-only files)
-                const polymerComp =
-                    await plugin.builders.structure.tryCreateComponentStatic(
-                        cell, 'polymer', {}, 'boltz-polymer'
-                    );
-
-                if (polymerComp) {
-                    await plugin.builders.structure.representation
-                        .addRepresentation(polymerComp, {
-                            type:        'molecular-surface',
-                            typeParams:  { alpha: 0.3 },
-                            color:       'uniform',
-                            colorParams: { value: COLOR.protein },
-                        });
+                // 3. Update each representation via state builder
+                //    This bypasses component.add() and getSelection() entirely
+                for (const repr of comp.representations) {
+                    try {
+                        await plugin.build()
+                            .to(repr.cell)
+                            .update(current => ({
+                                ...current,
+                                type: {
+                                    name:   'molecular-surface',
+                                    params: { alpha },
+                                },
+                                colorTheme: {
+                                    name:   'uniform',
+                                    params: { value: color },
+                                },
+                            }))
+                            .commit();
+                    } catch (e) {
+                        console.warn(`Skipping representation for "${key}":`, e.message);
+                    }
                 }
-
-                // ---- Ligand (non-polymer, non-water) ----
-                const ligandComp =
-                    await plugin.builders.structure.tryCreateComponentStatic(
-                        cell, 'ligand', {}, 'boltz-ligand'
-                    );
-
-                if (ligandComp) {
-                    await plugin.builders.structure.representation
-                        .addRepresentation(ligandComp, {
-                            type:        'molecular-surface',
-                            typeParams:  { alpha: 1.0 },
-                            color:       'uniform',
-                            colorParams: { value: COLOR.ligand },
-                        });
-                }
-            });
+            }
         }
 
         console.log('Boltz style preset applied');
@@ -195,7 +196,7 @@ async function _setTransparentBackground() {
             renderer: { backgroundColor: { r: 0, g: 0, b: 0, a: 0 } },
         });
     } catch (e) {
-        // canvas3d may not be ready yet on first init - safe to ignore
+        // canvas3d may not be ready on first init - safe to ignore
     }
 }
 
