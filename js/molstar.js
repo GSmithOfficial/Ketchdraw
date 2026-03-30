@@ -36,14 +36,11 @@
 const MOLSTAR_JS_URL =
     'https://cdn.jsdelivr.net/npm/molstar@5.7.0/build/viewer/molstar.js';
 
-// Colors confirmed from state file analysis (plain 0xRRGGBB integers)
+// Boltz colours - Molstar Color is a plain 0xRRGGBB integer
 const COLOR = {
-    protein: 0x5078D2,  // blue
-    ligand:  0xFCC400,  // yellow - exact match from state overpaint color
+    protein: 0x5078D2,   // blue
+    ligand:  0xFCC400,   // yellow
 };
-
-// Component keys Molstar assigns to non-polymer entities
-const LIGAND_KEYS = new Set(['ligand', 'non-polymer', 'branched', 'coarse']);
 
 let viewer    = null;
 let molLoaded = false;
@@ -138,8 +135,8 @@ export async function applyBoltzPreset() {
     const plugin = viewer.plugin;
 
     try {
-        // 1. Transparent background + illustrative outline + occlusion
-        //    All params taken directly from saved .molx state file
+        // 1. Transparent background + illustrative outline only
+        //    Occlusion (SSAO) params format changed in 5.7.0 - omit to avoid crash
         await viewer?.plugin?.canvas3d?.setProps({
             renderer: { backgroundColor: { r: 0, g: 0, b: 0, a: 0 } },
             postprocessing: {
@@ -150,19 +147,6 @@ export async function applyBoltzPreset() {
                         color:              0x000000,
                         threshold:          0.33,
                         includeTransparent: true,
-                    },
-                },
-                occlusion: {
-                    name: 'on',
-                    params: {
-                        samples:              32,
-                        radius:               5,
-                        bias:                 0.8,
-                        blurKernelSize:       15,
-                        blurDepthBias:        0.5,
-                        resolutionScale:      1,
-                        color:                0,
-                        transparentThreshold: 0.4,
                     },
                 },
             },
@@ -183,11 +167,17 @@ export async function applyBoltzPreset() {
             for (const comp of components) {
                 const key = (comp.key || '').toLowerCase();
 
-                if (key === 'water' || key === 'ion' || key === 'coarse') continue;
+                if (key.includes('water') || key.includes('ion') || key.includes('coarse')) continue;
 
-                const isLigand = LIGAND_KEYS.has(key);
-                const color    = isLigand ? COLOR.ligand : COLOR.protein;
-                const alpha    = isLigand ? 1.0           : 0.3;
+                // FIX: actual keys are 'structure-component-static-ligand' etc.
+                // Use includes() not Set.has() which only matches exact strings
+                const isLigand =
+                    key.includes('ligand')       ||
+                    key.includes('non-polymer')  ||
+                    key.includes('branched');
+
+                const color = isLigand ? COLOR.ligand : COLOR.protein;
+                const alpha = isLigand ? 1.0           : 0.3;
 
                 // Step 1: delete existing representations (cartoon/ball-and-stick)
                 // We cannot change type.name via .update() - it is silently ignored
