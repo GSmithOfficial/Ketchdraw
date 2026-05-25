@@ -1,0 +1,468 @@
+/* ================================================================
+   BoltzSpace — Chemical Space Explorer styles
+   Uses design tokens from css/styles.css (:root)
+================================================================ */
+
+/* ---- Layout ---- */
+
+#boltzspace-container {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+#space-plots-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-cream);
+    overflow: hidden;
+    position: relative;
+}
+
+#space-plots-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    min-height: 0;
+}
+
+#umap-plot,
+#tsne-plot {
+    background: var(--bg-surface);
+    width: 100%;
+    height: 100%;
+}
+
+/* ---- Empty state ---- */
+
+#space-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    gap: 12px;
+    padding: 40px;
+    text-align: center;
+}
+
+#space-empty-state svg {
+    opacity: 0.25;
+    color: var(--green-sage);
+}
+
+#space-empty-state p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* ---- Methods bar ---- */
+
+#space-methods-bar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border);
+    min-height: 28px;
+}
+
+#space-methods-text {
+    flex: 1;
+    font-size: 11px;
+    font-family: 'SF Mono', 'Fira Mono', monospace;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: all;
+    cursor: text;
+}
+
+#space-methods-copy-btn {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    height: 20px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-white);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+}
+
+#space-methods-copy-btn:hover {
+    background: var(--green-dark);
+    color: white;
+    border-color: var(--green-dark);
+}
+
+/* ---- Bottom card strip ---- */
+
+#space-card-strip {
+    height: 220px;
+    flex-shrink: 0;
+    background: var(--bg-cream);
+    border-top: 1px solid var(--border);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+#space-card-strip-inner {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    height: 100%;
+    align-items: stretch;
+}
+
+#space-card-strip::-webkit-scrollbar { height: 4px; }
+#space-card-strip::-webkit-scrollbar-track { background: transparent; }
+#space-card-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ---- Card strip placeholder ---- */
+
+.space-card-strip-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-style: italic;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* ---- Space cards ---- */
+
+.space-card {
+    width: 180px;
+    flex-shrink: 0;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.15s;
+}
+
+.space-card:hover {
+    box-shadow: 0 4px 12px rgba(53, 88, 61, 0.12);
+}
+
+.space-card-header {
+    background: var(--green-dark);
+    padding: 6px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.space-card-id {
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.space-card-structure {
+    flex: 1;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    overflow: hidden;
+}
+
+.space-card-structure svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.space-card-scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    padding: 1px;
+}
+
+.space-score-item {
+    background: var(--bg-white);
+    padding: 5px 6px;
+    text-align: center;
+}
+
+.space-score-label {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 7.5px;
+    line-height: 1.2;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin-bottom: 2px;
+    word-break: break-word;
+}
+
+.space-score-value {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green-dark);
+}
+
+/* ---- Right panel ---- */
+
+#space-panel {
+    width: 320px;
+    flex-shrink: 0;
+    background: var(--bg-white);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.space-select {
+    width: 100%;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 6px;
+}
+
+.space-textarea {
+    width: 100%;
+    height: 100px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-family: 'SF Mono', 'Fira Mono', monospace;
+    resize: vertical;
+    outline: none;
+    line-height: 1.5;
+    box-sizing: border-box;
+}
+
+.space-textarea:focus {
+    border-color: var(--green-dark);
+}
+
+.space-score-toggle {
+    display: flex;
+    gap: 3px;
+    background: var(--bg-surface);
+    border-radius: 6px;
+    padding: 3px;
+    margin-bottom: 10px;
+}
+
+.score-btn {
+    flex: 1;
+    padding: 6px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+
+.score-btn.active {
+    background: var(--green-dark);
+    color: white;
+    font-weight: 600;
+}
+
+.space-settings-block {
+    margin-top: 10px;
+    padding: 10px;
+    background: var(--bg-surface);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+}
+
+.space-settings-heading {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+}
+
+.space-settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.space-settings-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.space-settings-input {
+    width: 72px;
+    height: 26px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-white);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    text-align: right;
+    transition: opacity 0.15s, border-color 0.15s;
+}
+
+.space-settings-input:focus {
+    border-color: var(--green-dark);
+}
+
+.space-settings-input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    background: var(--bg-surface);
+}
+
+/* ---- Manual Mode row ---- */
+
+.space-settings-manual-row {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.space-settings-label-manual {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ---- Toggle switch ---- */
+
+.space-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.space-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.space-toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    transition: background 0.2s;
+}
+
+.space-toggle-track::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+}
+
+.space-toggle-switch input:checked + .space-toggle-track {
+    background: var(--green-dark);
+}
+
+.space-toggle-switch input:checked + .space-toggle-track::before {
+    transform: translateX(14px);
+}
+
+/* ---- Settings tab switcher ---- */
+
+.space-settings-tabs {
+    display: flex;
+    gap: 3px;
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px;
+    margin-bottom: 8px;
+}
+
+.settings-tab-btn {
+    flex: 1;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+
+.settings-tab-btn.active {
+    background: var(--green-dark);
+    color: white;
+    font-weight: 600;
+}
+
+.settings-tab-btn:not(.active):hover {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+.space-legend {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}

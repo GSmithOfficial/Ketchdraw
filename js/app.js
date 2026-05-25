@@ -13,6 +13,7 @@ import { initKetcher }                          from './ketcher.js';
 import { calculateProperties, renderMolecules } from './properties.js';
 import { updatePkaSmiles, calculatePka }         from './pka.js';
 import { initMolstar, loadByPdbId, loadFromFile, applyBoltzPreset } from './molstar.js';
+import { initPeptideBar }                        from './peptide.js';
 
 // ----------------------------------------------------------------
 // App state
@@ -23,7 +24,7 @@ let isKetcherReady = false;
 let currentMolecules = [];
 let currentView    = 'cards';   // 'cards' | 'pka'
 
-const RDKIT_CDN_BASE = 'https://unpkg.com/@rdkit/rdkit/dist/';
+const RDKIT_CDN_BASE = 'https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/';
 
 // ----------------------------------------------------------------
 // Boot sequence
@@ -129,6 +130,7 @@ function _checkReady() {
     if (isRDKitReady && isKetcherReady) {
         document.getElementById('loading').classList.add('hidden');
         _updateStatus('Ready', true);
+        initPeptideBar(RDKit);
     }
 }
 
@@ -147,19 +149,31 @@ function _setLoadingStatus(text) {
 
 const MODES = {
     draw: {
-        subtitle:   'Molecular Structure Editor',
-        panelTitle: 'Properties',
-        btnClass:   'active-draw',
+        subtitle:    'Molecular Structure Editor',
+        panelTitle:  'Properties',
+        btnClass:    'active-draw',
+        containerId: 'ketcher-container',
+        btnId:       'btn-draw',
     },
     star: {
-        subtitle:   '3D Structure Viewer',
-        panelTitle: 'Viewer',
-        btnClass:   'active-star',
+        subtitle:    '3D Structure Viewer',
+        panelTitle:  'Viewer',
+        btnClass:    'active-star',
+        containerId: 'molstar-container',
+        btnId:       'btn-star',
+    },
+    space: {
+        subtitle:    'Chemical Space Explorer',
+        panelTitle:  'Chemical Space',
+        btnClass:    'active-space',
+        containerId: 'boltzspace-container',
+        btnId:       'btn-space',
     },
 };
 
-let currentMode     = 'draw';
-let molstarInitted  = false;
+let currentMode       = 'draw';
+let molstarInitted    = false;
+let boltzSpaceInitted = false;
 
 async function switchMode(mode) {
     if (mode === currentMode) return;
@@ -171,15 +185,17 @@ async function switchMode(mode) {
     document.getElementById('app-subtitle').textContent = cfg.subtitle;
     document.getElementById('panel-title').textContent  = cfg.panelTitle;
 
-    // Swap button active classes
-    document.getElementById('btn-draw').className =
-        'mode-btn' + (mode === 'draw' ? ' active-draw' : '');
-    document.getElementById('btn-star').className =
-        'mode-btn' + (mode === 'star' ? ' active-star' : '');
+    // Swap button active classes and main containers — driven by MODES so
+    // adding a new mode here never requires touching this loop.
+    Object.entries(MODES).forEach(([key, c]) => {
+        document.getElementById(c.btnId).className =
+            'mode-btn' + (key === mode ? ` ${c.btnClass}` : '');
+        document.getElementById(c.containerId).classList.toggle('hidden', key !== mode);
+    });
 
-    // Swap canvases
-    document.getElementById('ketcher-container').classList.toggle('hidden', mode === 'star');
-    document.getElementById('molstar-container').classList.toggle('hidden', mode === 'draw');
+    // Hide shared properties panel and its toggle in space mode (BoltzSpace has its own right panel)
+    document.getElementById('properties-panel').classList.toggle('hidden', mode === 'space');
+    document.getElementById('panel-toggle').classList.toggle('hidden', mode === 'space');
 
     // Swap panel content
     const isDraw = mode === 'draw';
@@ -191,6 +207,17 @@ async function switchMode(mode) {
     // Reset Cards tab as active when returning to BoltzDraw
     if (isDraw) {
         _setDrawView('cards');
+    }
+
+    // Lazy-init BoltzSpace on first switch
+    if (mode === 'space' && !boltzSpaceInitted) {
+        boltzSpaceInitted = true;
+        try {
+            const { initBoltzSpace } = await import('./boltzspace.js');
+            await initBoltzSpace(RDKit);
+        } catch (err) {
+            console.error('BoltzSpace init failed:', err);
+        }
     }
 
     // Lazy-init Molstar on first switch to BoltzStar
@@ -207,8 +234,9 @@ async function switchMode(mode) {
     }
 }
 
-document.getElementById('btn-draw').addEventListener('click', () => switchMode('draw'));
-document.getElementById('btn-star').addEventListener('click', () => switchMode('star'));
+document.getElementById('btn-draw').addEventListener('click',  () => switchMode('draw'));
+document.getElementById('btn-star').addEventListener('click',  () => switchMode('star'));
+document.getElementById('btn-space').addEventListener('click', () => switchMode('space'));
 
 
 

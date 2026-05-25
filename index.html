@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/molstar@5.7.0/build/viewer/molstar.css">
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/boltzspace.css">
 </head>
 <body>
 
@@ -30,6 +31,9 @@
             <button class="mode-btn" id="btn-star">
                 <span class="btn-brand">Boltz</span><span class="btn-product">Star</span>
             </button>
+            <button class="mode-btn" id="btn-space">
+                <span class="btn-brand">Boltz</span><span class="btn-product">Space</span>
+            </button>
         </nav>
         <div class="header-divider"></div>
         <span class="app-subtitle" id="app-subtitle">Molecular Structure Editor</span>
@@ -40,11 +44,141 @@
         <!-- BoltzDraw: Ketcher 2D canvas -->
         <div id="ketcher-container">
             <iframe id="ketcher-frame" src="ketcher/index.html" title="Molecular structure editor"></iframe>
+            <div id="peptide-bar">
+                <span class="peptide-bar-label">Peptide</span>
+                <input type="text"
+                       id="peptide-input"
+                       class="peptide-input"
+                       placeholder="e.g. GGVWFNPCS"
+                       spellcheck="false"
+                       autocomplete="off"
+                       autocapitalize="characters">
+                <button id="peptide-convert-btn" class="peptide-convert-btn">Convert</button>
+                <span id="peptide-status" class="peptide-status hidden"></span>
+            </div>
         </div>
 
         <!-- BoltzStar: Molstar 3D viewer -->
         <div id="molstar-container" class="hidden">
             <div id="molstar-viewport"></div>
+        </div>
+
+        <!-- BoltzSpace: chemical space explorer -->
+        <div id="boltzspace-container" class="hidden">
+
+            <div id="space-plots-area">
+                <div id="space-empty-state"></div>
+                <div id="space-plots-grid" class="hidden">
+                    <div id="umap-plot"></div>
+                    <div id="tsne-plot"></div>
+                </div>
+                <!-- Methods bar: shows parameters used, always present after projection -->
+                <div id="space-methods-bar" class="hidden">
+                    <span id="space-methods-text"></span>
+                    <button id="space-methods-copy-btn">Copy</button>
+                </div>
+
+                <div id="space-card-strip" class="hidden">
+                    <div id="space-card-strip-inner"></div>
+                </div>
+            </div>
+
+            <div id="space-panel">
+
+                <div class="panel-header">
+                    <div class="panel-header-left">
+                        <span id="panel-title-space">Chemical Space</span>
+                    </div>
+                </div>
+
+                <div class="star-section" id="space-upload-section">
+                    <label class="star-label">Library</label>
+                    <label class="star-upload-label" for="csv-file-input">
+                        Upload CSV (SMILES column required)
+                    </label>
+                    <input type="file" id="csv-file-input" accept=".csv" style="display:none">
+                    <div class="star-status hidden" id="space-upload-status"></div>
+
+                    <div id="space-column-config" class="hidden">
+                        <label class="star-label">SMILES column</label>
+                        <select id="smiles-col-select" class="space-select"></select>
+                        <label class="star-label">ID column</label>
+                        <select id="id-col-select" class="space-select"></select>
+                        <label class="star-label">Score 1 column</label>
+                        <select id="score1-col-select" class="space-select"></select>
+                        <label class="star-label">Score 2 column</label>
+                        <select id="score2-col-select" class="space-select"></select>
+
+                        <div class="space-settings-block">
+
+                            <!-- Manual Mode toggle -->
+                            <div class="space-settings-row space-settings-manual-row">
+                                <span class="space-settings-label space-settings-label-manual">Manual Mode</span>
+                                <label class="space-toggle-switch">
+                                    <input type="checkbox" id="manual-mode-toggle">
+                                    <span class="space-toggle-track"></span>
+                                </label>
+                            </div>
+
+                            <!-- UMAP / t-SNE tab switcher -->
+                            <div class="space-settings-tabs">
+                                <button class="settings-tab-btn active" id="settings-tab-umap">UMAP</button>
+                                <button class="settings-tab-btn" id="settings-tab-tsne">t-SNE</button>
+                            </div>
+
+                            <!-- UMAP settings panel -->
+                            <div id="umap-settings-panel">
+                                <div class="space-settings-row">
+                                    <span class="space-settings-label">Neighbors</span>
+                                    <input type="number" class="space-settings-input" id="umap-neighbors" value="15" min="2" max="200" disabled>
+                                </div>
+                                <div class="space-settings-row">
+                                    <span class="space-settings-label">Min Distance</span>
+                                    <input type="number" class="space-settings-input" id="umap-min-dist" value="0.1" min="0" max="1" step="0.05" disabled>
+                                </div>
+                            </div>
+
+                            <!-- t-SNE settings panel -->
+                            <div id="tsne-settings-panel" class="hidden">
+                                <div class="space-settings-row">
+                                    <span class="space-settings-label">Perplexity</span>
+                                    <input type="number" class="space-settings-input" id="tsne-perplexity" value="30" min="5" max="100" disabled>
+                                </div>
+                                <div class="space-settings-row">
+                                    <span class="space-settings-label">Iterations</span>
+                                    <input type="number" class="space-settings-input" id="tsne-iterations" value="200" min="100" max="5000" step="50" disabled>
+                                </div>
+                                <div class="space-settings-row">
+                                    <span class="space-settings-label">Learning Rate</span>
+                                    <input type="number" class="space-settings-input" id="tsne-lr" value="100" min="10" max="1000" step="10" disabled>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <button class="star-apply-btn" id="run-projection-btn">Run Projection</button>
+                    </div>
+                </div>
+
+                <div class="star-section hidden" id="space-highlight-section">
+                    <label class="star-label">Highlight Molecules</label>
+                    <textarea id="highlight-input"
+                              class="space-textarea"
+                              placeholder="Paste SMILES or IDs, one per line (20-50 recommended)"></textarea>
+                    <button class="star-load-btn" id="apply-highlight-btn">Apply</button>
+                    <div class="star-status hidden" id="highlight-status"></div>
+                </div>
+
+                <div class="star-section hidden" id="space-score-section">
+                    <label class="star-label">Colour By</label>
+                    <div class="space-score-toggle">
+                        <button class="score-btn active" id="score1-btn">Score 1</button>
+                        <button class="score-btn" id="score2-btn">Score 2</button>
+                    </div>
+                    <div class="space-legend" id="space-legend"></div>
+                </div>
+
+            </div>
         </div>
 
         <button class="panel-toggle" id="panel-toggle" title="Toggle Properties Panel">

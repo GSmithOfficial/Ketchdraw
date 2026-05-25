@@ -103,6 +103,18 @@ function _setupInteractionDetection(frame) {
 }
 
 /**
+ * Programmatically load a SMILES string into the Ketcher canvas.
+ * Resets the committed-SMILES cache so the normal polling loop will
+ * pick up the new structure and update the properties panel.
+ */
+export async function loadMolecule(smiles) {
+    if (!ketcherInstance) throw new Error('Ketcher not ready');
+    await ketcherInstance.setMolecule(smiles);
+    // Clear cache — next polling tick will detect the change and fire onSmilesChangeFn
+    lastCommittedSmiles = '';
+}
+
+/**
  * Debounce helper - waits 300 ms after last interaction before polling.
  * Skipped if mouse is still inside the frame (ghost could still be live).
  */
